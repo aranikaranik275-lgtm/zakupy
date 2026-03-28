@@ -731,8 +731,10 @@ function parseMultipleProducts(rawText) {
     for (const line of lines) {
       // Pomiń nagłówki, tytuły i URLe
       if (/^(składniki|przepis|instrukcja|sposób|przygotowanie|uwagi?|opis)/i.test(line)) continue;
-      if (/^https?:\/\//i.test(line)) continue;
+      if (/https?:\/\//i.test(line)) continue;
       if (line.length < 3) continue;
+      // Pomiń linie-tytuły: krótkie, bez myślnika/liczby (np. "Naleśniki", "Na 4 porcje")
+      if (!/^\s*[-–—*•]/.test(line) && !/\d/.test(line) && line.length < 40) continue;
 
       // Usuń myślnik na początku
       let cleaned = line.replace(/^\s*[-–—*•]\s*/, '').trim();
@@ -773,8 +775,8 @@ function parseMultipleProducts(rawText) {
 function cleanIngredientLine(line) {
   let s = line.trim();
   if (!s || s.length < 2) return null;
-  // Usuń ilość na końcu w nawiasach lub po myślniku: "- około 375 ml" itp.
-  s = s.replace(/\s*[-–]\s*(około|ok\.?|mniej więcej)?\s*[\d,.]+ ?(ml|g|kg|l|szt\.?)\s*$/i, '');
+  // Usuń ilość na końcu w nawiasach lub po myślniku: "- około 375 ml", "- 230 g", "- około 165 g po rozbiciu"
+  s = s.replace(/\s*[-–]\s*(około|ok\.?|mniej więcej)?\s*[\d,.]+ ?(ml|g|kg|l|szt\.?)(\s.*)?$/i, '');
   // Usuń "np." i alternatywy opisowe na końcu: "np. śląskiej lub podwawelskiej"
   s = s.replace(/\s*(np\.|lub|albo|ewentualnie)\s+[\w\s]+$/i, (match, p1, offset, str) => {
     // Zachowaj tylko jeśli to krótki sufiks (nie cała nazwa)
