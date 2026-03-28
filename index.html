@@ -156,7 +156,7 @@ body.modal-open { overflow:hidden; }
 </div>
 
 <div class="add-bar">
-  <input class="add-input" id="mainInput" placeholder="Dodaj produkt albo kilka po przecinku..." autocomplete="off" onkeydown="if(event.key==='Enter')addItem()">
+  <input class="add-input" id="mainInput" placeholder="Dodaj produkt albo kilka po przecinku..." autocomplete="off" onkeydown="if(event.key==='Enter')addItem()" onpaste="handlePaste(event)">
   <button class="btn-camera" onclick="triggerImageImport()" title="Zeskanuj zdjęcie listy">📷</button>
   <button class="btn-mic" onclick="toggleVoiceInput()" id="btnMic" title="Dyktuj produkty">🎤</button>
   <button class="btn-add" onclick="addItem()">+</button>
@@ -911,6 +911,21 @@ function addSingleItem(raw, cat, qty) {
   saveAndRender();
   setTimeout(() => document.getElementById('item_' + newItem.id)?.classList.add('item-new'), 10);
   return true;
+}
+// Obsługa wklejania — input kasuje newline'y, więc łapiemy oryginalny tekst z clipboard
+function handlePaste(e) {
+  const pasted = (e.clipboardData || window.clipboardData).getData('text');
+  if (!pasted || !pasted.includes('\n')) return; // jednolinijkowe — niech input obsłuży normalnie
+  e.preventDefault();
+  const input = document.getElementById('mainInput');
+  const parts = parseMultipleProducts(pasted);
+  if (parts.length > 1) {
+    addManyItems(pasted);
+    input.value = '';
+  } else if (parts.length === 1) {
+    addSingleItem(parts[0]);
+    input.value = '';
+  }
 }
 function addItem(name, cat, qty) {
   const input = document.getElementById('mainInput');
