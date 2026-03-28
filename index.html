@@ -1,0 +1,2016 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Zakupy">
+<meta name="theme-color" content="#faf7f2">
+<meta name="description" content="Lista zakupów z synchronizacją i asystentem AI">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Zakupy Sync</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#faf7f2; --surface:#ffffff; --surface2:#f2ede4; --surface3:#ede8de;
+  --accent:#8b5e3c; --accent2:#a0714f;
+  --text:#2c1f0e; --text-dim:#8a7560; --border:#ddd5c5; --danger:#c0392b; --warning:#c87941;
+}
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; padding-bottom:env(safe-area-inset-bottom,20px); }
+button, input, textarea { font:inherit; }
+body.modal-open { overflow:hidden; }
+.topbar { position:sticky; top:0; z-index:100; background:rgba(250,247,242,.95); backdrop-filter:blur(16px); padding:16px 20px 12px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.topbar h1 { font-family:'Syne',sans-serif; font-weight:800; font-size:22px; color:var(--accent); }
+.topbar .subtitle { font-size:11px; color:var(--text-dim); margin-top:1px; }
+.cloud-pill { margin-top:6px; display:inline-flex; gap:6px; align-items:center; font-size:11px; padding:4px 8px; border-radius:999px; border:1px solid var(--border); color:var(--text-dim); background:var(--surface2); }
+.cloud-pill.connected { color:#5a7a3a; border-color:#b5ccaa; background:#eef4e8; }
+.cloud-pill.warning { color:var(--warning); border-color:#e8c9a0; background:#fdf5ec; }
+.btn-icon,.btn-add,.btn-mic,.btn-camera,.qty-btn,.item-del,.sort-btn,.plan-mode-btn,.btn-small { cursor:pointer; }
+.btn-icon { width:38px; height:38px; border-radius:12px; border:1px solid var(--border); background:var(--surface2); color:var(--text); display:flex; align-items:center; justify-content:center; font-size:18px; }
+.btn-icon:active,.btn-add:active,.btn-mic:active,.btn-camera:active,.qty-btn:active,.btn-secondary:active,.btn-primary:active,.sort-btn:active,.plan-mode-btn:active,.btn-ai:active,.btn-small:active { transform:scale(.96); }
+.add-bar { padding:12px 20px 12px; display:flex; gap:8px; }
+.add-input,.dish-input,.auth-input,.config-textarea { flex:1; background:var(--surface); border:1.5px solid var(--border); border-radius:14px; padding:12px 16px; color:var(--text); font-size:15px; outline:none; width:100%; }
+.add-input:focus,.dish-input:focus,.auth-input:focus,.config-textarea:focus { border-color:var(--accent); }
+.add-input::placeholder,.dish-input::placeholder,.auth-input::placeholder,.config-textarea::placeholder { color:var(--text-dim); }
+.config-textarea { min-height:110px; resize:vertical; }
+.btn-add,.btn-mic,.btn-camera { width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.btn-add { background:var(--accent); color:#fff; border:none; font-size:24px; font-weight:700; }
+.btn-mic,.btn-camera { background:var(--surface2); color:var(--text); border:1.5px solid var(--border); font-size:20px; }
+.btn-mic.recording { background:#fdecea; border-color:var(--danger); color:var(--danger); box-shadow:0 0 0 6px rgba(192,57,43,.08); }
+.hint { padding:0 20px 12px; font-size:12px; color:var(--text-dim); }
+.hint strong { color:var(--accent); }
+.progress-bar-wrap { padding:0 20px 12px; }
+.progress-info { display:flex; justify-content:space-between; font-size:12px; color:var(--text-dim); margin-bottom:6px; }
+.progress-bar { height:4px; background:var(--surface2); border-radius:4px; overflow:hidden; }
+.progress-fill { height:100%; width:0; background:linear-gradient(90deg,var(--accent2),var(--accent)); transition:width .3s ease; }
+.tabs { display:flex; gap:6px; padding:12px 20px; overflow-x:auto; scrollbar-width:none; }
+.tabs::-webkit-scrollbar { display:none; }
+.tab { flex-shrink:0; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:500; border:1.5px solid var(--border); background:transparent; color:var(--text-dim); cursor:pointer; }
+.tab.active { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:700; }
+.panel { margin:0 20px 16px; background:var(--surface); border:1.5px solid var(--border); border-radius:18px; padding:16px; box-shadow:0 1px 4px rgba(44,31,14,.06); }
+.panel h3 { font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:var(--accent); letter-spacing:.5px; text-transform:uppercase; margin-bottom:10px; display:flex; gap:6px; align-items:center; }
+.panel h4 { font-size:12px; color:var(--text-dim); margin:14px 0 8px; text-transform:uppercase; letter-spacing:.5px; }
+.dish-row,.settings-row,.auth-row,.camera-row { display:flex; gap:8px; flex-wrap:wrap; }
+.plan-modes { display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+.plan-mode-btn,.btn-small { padding:8px 12px; border-radius:12px; border:1.5px solid var(--border); background:var(--surface2); color:var(--text-dim); font-size:13px; }
+.plan-mode-btn.active { background:var(--accent); color:#fff; font-weight:700; border-color:var(--accent); }
+.btn-ai,.btn-secondary,.btn-primary { border:none; border-radius:14px; }
+.btn-ai { padding:10px 16px; background:var(--accent); color:#fff; font-family:'Syne',sans-serif; font-size:13px; font-weight:700; white-space:nowrap; }
+.btn-ai:disabled,.btn-small:disabled { opacity:.4; cursor:not-allowed; }
+.ai-suggestions { margin:0 20px 16px; display:none; }
+.ai-suggestions.visible { display:block; }
+.ai-label { font-size:11px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
+.suggestions-grid { display:flex; flex-wrap:wrap; gap:6px; }
+.suggestion-chip { padding:6px 12px; background:var(--surface); border:1.5px solid var(--border); border-radius:20px; font-size:13px; color:var(--text-dim); cursor:pointer; display:flex; gap:4px; align-items:center; }
+.suggestion-chip:hover,.suggestion-chip:active { border-color:var(--accent); color:var(--accent); background:#fdf6f0; }
+.category-section { margin-bottom:4px; }
+.cat-header { display:flex; align-items:center; gap:8px; padding:8px 20px 6px; cursor:pointer; }
+.cat-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.cat-name { font-family:'Syne',sans-serif; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); }
+.cat-count { font-size:11px; color:var(--text-dim); background:var(--surface2); padding:1px 7px; border-radius:10px; }
+.cat-toggle { margin-left:auto; color:var(--text-dim); font-size:12px; }
+.items-list { padding:0 20px; }
+.item { position:relative; overflow:hidden; display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--surface); border:1.5px solid var(--border); border-radius:14px; margin-bottom:6px; box-shadow:0 1px 3px rgba(44,31,14,.04); }
+.item.done { opacity:.5; background:var(--surface2); }
+.item.done .item-name { text-decoration:line-through; color:var(--text-dim); }
+.item-check { width:24px; height:24px; border-radius:8px; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.item.done .item-check { background:var(--accent); border-color:var(--accent); color:#fff; }
+.item-info { flex:1; min-width:0; }
+.item-name { font-size:15px; font-weight:500; }
+.item-qty { font-size:12px; color:var(--text-dim); margin-top:1px; }
+.qty-controls { display:flex; align-items:center; gap:6px; }
+.qty-btn { width:24px; height:24px; border-radius:7px; background:var(--surface2); border:1.5px solid var(--border); color:var(--text); font-size:16px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+.qty-val { font-size:14px; font-weight:600; min-width:24px; text-align:center; }
+.item-del { width:28px; height:28px; border:none; border-radius:8px; background:transparent; color:var(--text-dim); font-size:16px; display:flex; align-items:center; justify-content:center; }
+.empty { text-align:center; padding:48px 20px; color:var(--text-dim); }
+.empty .emoji { font-size:48px; margin-bottom:12px; }
+.settings-list { display:flex; flex-direction:column; gap:8px; }
+.settings-item { display:flex; align-items:center; gap:10px; background:var(--surface2); border:1.5px solid var(--border); border-radius:14px; padding:10px 12px; }
+.settings-name { flex:1; font-size:14px; }
+.sort-btn { width:32px; height:32px; border-radius:10px; border:1.5px solid var(--border); background:var(--surface); color:var(--text); font-size:14px; }
+.settings-note,.mini-note { font-size:12px; color:var(--text-dim); margin-top:10px; line-height:1.45; }
+.mini-note { margin-top:6px; }
+.ai-loading { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--accent); padding:8px 0; }
+.spinner { width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
+.auth-status { font-size:12px; color:var(--text-dim); margin-top:8px; }
+.auth-status strong { color:var(--accent); }
+.row-full { width:100%; }
+.toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--text); border:1px solid transparent; border-radius:12px; padding:10px 18px; font-size:13px; color:#faf7f2; opacity:0; transition:all .25s; pointer-events:none; z-index:999; white-space:nowrap; max-width:90vw; text-align:center; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.bottom-actions { position:fixed; bottom:0; left:0; right:0; padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px)); background:rgba(250,247,242,.97); backdrop-filter:blur(16px); border-top:1px solid var(--border); display:flex; gap:10px; }
+.btn-secondary { flex:1; padding:13px; background:var(--surface2); border:1.5px solid var(--border); color:var(--text-dim); font-size:14px; font-weight:500; border-radius:14px; }
+.btn-primary { flex:2; padding:13px; background:var(--accent); color:#fff; font-family:'Syne',sans-serif; font-size:14px; font-weight:700; border-radius:14px; }
+.section-spacer { height:100px; }
+.hidden-input { display:none; }
+@keyframes spin { to { transform:rotate(360deg); } }
+@keyframes slideIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+.item-new { animation:slideIn .2s ease; }
+
+/* Edit modal */
+.modal-overlay { position:fixed; inset:0; background:rgba(44,31,14,.4); z-index:500; display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity .2s; }
+.modal-overlay.open { opacity:1; pointer-events:all; }
+.modal-sheet { background:var(--surface); border-radius:24px 24px 0 0; padding:24px 20px calc(24px + env(safe-area-inset-bottom,0px)); width:100%; max-width:480px; transform:translateY(100%); transition:transform .25s ease; border-top:1.5px solid var(--border); }
+.modal-overlay.open .modal-sheet { transform:translateY(0); }
+.modal-title { font-family:'Syne',sans-serif; font-weight:700; font-size:16px; color:var(--accent); margin-bottom:18px; }
+.modal-field { margin-bottom:14px; }
+.modal-field label { font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:6px; }
+.modal-field input, .modal-field select { width:100%; background:var(--surface2); border:1.5px solid var(--border); border-radius:12px; padding:11px 14px; color:var(--text); font-size:15px; outline:none; }
+.modal-field select option { background:var(--surface); }
+.modal-field input:focus, .modal-field select:focus { border-color:var(--accent); }
+.modal-row { display:flex; gap:8px; }
+.modal-actions { display:flex; gap:10px; margin-top:18px; }
+.modal-actions .btn-secondary { border-radius:14px; }
+.modal-actions .btn-primary { border-radius:14px; }
+.item-edit { width:28px; height:28px; border:none; border-radius:8px; background:transparent; color:var(--text-dim); font-size:14px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.recipe-item { display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--surface2); border:1.5px solid var(--border); border-radius:14px; margin-bottom:6px; cursor:pointer; }
+.recipe-item:active { background:#fdf0e6; border-color:var(--accent); }
+.recipe-name { flex:1; font-size:14px; font-weight:500; color:var(--text); }
+.recipe-meta { font-size:11px; color:var(--text-dim); margin-top:2px; }
+.recipe-tags { display:flex; gap:4px; flex-wrap:wrap; margin-top:4px; }
+.recipe-tag { font-size:10px; padding:2px 7px; border-radius:10px; background:var(--surface); color:var(--text-dim); border:1px solid var(--border); }
+.recipe-del { width:28px; height:28px; border:none; background:transparent; color:var(--text-dim); font-size:16px; cursor:pointer; flex-shrink:0; }
+.recipes-empty { text-align:center; padding:24px; color:var(--text-dim); font-size:13px; }
+.ingredient-row { display:flex; gap:6px; align-items:center; }
+.ingredient-row input { background:var(--surface2); border:1.5px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-size:13px; outline:none; }
+.ingredient-row input:focus { border-color:var(--accent); }
+.ingredient-row .ing-name { flex:2; }
+.ingredient-row .ing-qty { flex:1; }
+.ingredient-row .ing-del { width:28px; height:28px; border:none; background:transparent; color:var(--danger); font-size:16px; cursor:pointer; flex-shrink:0; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div>
+    <h1>🛒 Zakupy</h1>
+    <div class="subtitle" id="listSubtitle">0 produktów</div>
+    <div class="cloud-pill warning" id="cloudStatus">☁ Tryb lokalny</div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn-icon" onclick="clearDone()" title="Usuń odhaczone">🗑</button>
+    <button class="btn-icon" onclick="toggleSettingsPanel()" title="Ustawienia" id="btnSettings">⚙</button>
+    <button class="btn-icon" onclick="toggleAIPanel()" title="Asystent" id="btnAI">✨</button>
+  </div>
+</div>
+
+<div class="add-bar">
+  <input class="add-input" id="mainInput" placeholder="Dodaj produkt albo kilka po przecinku..." autocomplete="off" onkeydown="if(event.key==='Enter')addItem()">
+  <button class="btn-camera" onclick="triggerImageImport()" title="Zeskanuj zdjęcie listy">📷</button>
+  <button class="btn-mic" onclick="toggleVoiceInput()" id="btnMic" title="Dyktuj produkty">🎤</button>
+  <button class="btn-add" onclick="addItem()">+</button>
+</div>
+<input type="file" class="hidden-input" id="imageInput" accept="image/*" onchange="handleImageImport(event)">
+
+<!-- Recipe editor modal -->
+<div class="modal-overlay" id="recipeEditorModal" onclick="closeRecipeEditor(event)">
+  <div class="modal-sheet" style="max-height:90vh;overflow-y:auto">
+    <div class="modal-title" id="recipeEditorTitle">📖 Nowy przepis</div>
+    <div class="modal-field">
+      <label>Nazwa dania</label>
+      <input type="text" id="reName" placeholder="np. Chłopski garnek, Rosół mamy...">
+    </div>
+    <div class="modal-field">
+      <label>Tagi (po przecinku)</label>
+      <input type="text" id="reTags" placeholder="np. obiad, zupa, szybkie, wegetariańskie">
+    </div>
+    <div class="modal-field">
+      <label>Składniki</label>
+      <input type="text" id="reIngredientsPaste"
+        placeholder="Wklej listę po przecinku: mleko, chleb, masło..."
+        style="width:100%;margin-bottom:8px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;"
+        onpaste="setTimeout(splitPastedIngredients,10)"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();splitPastedIngredients()}">
+      <div id="reIngredientsList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+      <button class="btn-small" style="width:100%;text-align:center" onclick="addIngredientRow()">+ Dodaj składnik</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" style="flex:1" onclick="closeRecipeEditor()">Anuluj</button>
+      <button class="btn-primary" style="flex:2" onclick="saveRecipeFromEditor()">💾 Zapisz przepis</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="editModal" onclick="closeEditModal(event)">
+  <div class="modal-sheet">
+    <div class="modal-title">✏️ Edytuj produkt</div>
+    <div class="modal-field">
+      <label>Nazwa</label>
+      <input type="text" id="editName" placeholder="Nazwa produktu">
+    </div>
+    <div class="modal-row">
+      <div class="modal-field" style="flex:1">
+        <label>Ilość</label>
+        <input type="text" id="editQty" placeholder="np. 2 szt., 500 g">
+      </div>
+      <div class="modal-field" style="flex:1">
+        <label>Liczba</label>
+        <input type="number" id="editAmount" min="1" value="1">
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>Kategoria</label>
+      <select id="editCat"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" style="flex:1" onclick="closeEditModal()">Anuluj</button>
+      <button class="btn-primary" style="flex:2" onclick="saveEdit()">Zapisz</button>
+    </div>
+  </div>
+</div>
+<div class="hint" id="voiceHint">Możesz wpisać lub podyktować kilka produktów naraz, np. <strong>mleko, chleb, pomidory, pasta do zębów</strong>. Aparat służy do konwersji zdjęcia listy na produkty.</div>
+
+<div class="progress-bar-wrap" id="progressWrap" style="display:none">
+  <div class="progress-info"><span id="progressText">0 z 0</span><span id="progressPct">0%</span></div>
+  <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap"><div class="progress-bar" style="flex:1;min-width:180px"><div class="progress-fill" id="progressFill"></div></div><button class="btn-small" id="toggleBoughtBtn" onclick="toggleBoughtVisibility()">Pokaż kupione</button></div>
+</div>
+
+<div class="tabs" id="catTabs"><button class="tab active" onclick="filterCat('all',this)">Wszystko</button></div>
+
+<div class="panel" id="settingsPanel" style="display:none">
+  <h3>⚙ Ustawienia i chmura</h3>
+  <h4>Kolejność kategorii</h4>
+  <div class="settings-list" id="settingsList"></div>
+  <div class="settings-note">Ustawiasz kolejność tylko raz. Potem każdy produkt trafia do właściwej kategorii i wyświetla się według tej kolejności niezależnie od wpisywania lub dyktowania.</div>
+
+  <h4>Synchronizacja Firebase</h4>
+  <textarea class="config-textarea" id="firebaseConfigInput" placeholder='Wklej tutaj obiekt konfiguracyjny Firebase Web App, np. {"apiKey":"...","authDomain":"...","projectId":"..."}'></textarea>
+  <div class="camera-row" style="margin-top:8px;">
+    <button class="btn-small" onclick="saveFirebaseConfig()">Zapisz konfigurację</button>
+    <button class="btn-small" onclick="initFirebaseFromInput()">Połącz z Firebase</button>
+    <button class="btn-small" onclick="clearFirebaseConfig()">Wyczyść</button>
+  </div>
+  <div class="mini-note">Po zapisaniu możesz logować się mailem i hasłem. Po zalogowaniu lista i ustawienia synchronizują się między urządzeniami.</div>
+
+  <div class="auth-row" style="margin-top:10px;">
+    <input class="auth-input" id="authEmail" type="email" placeholder="E-mail" autocomplete="username">
+    <input class="auth-input" id="authPassword" type="password" placeholder="Hasło" autocomplete="current-password">
+  </div>
+  <div class="camera-row" style="margin-top:8px;">
+    <button class="btn-small" onclick="registerUser()">Załóż konto</button>
+    <button class="btn-small" onclick="loginUser()">Zaloguj</button>
+    <button class="btn-small" onclick="logoutUser()">Wyloguj</button>
+  </div>
+  <div class="auth-status" id="authStatus">Nie połączono z Firebase.</div>
+
+  <h4>🤖 Claude AI (parsowanie przepisów)</h4>
+  <input class="auth-input row-full" id="anthropicKeyInput" type="password" placeholder="Klucz Anthropic API (sk-ant-...)">
+  <div class="camera-row" style="margin-top:8px;">
+    <button class="btn-small" onclick="saveAnthropicKey()">Zapisz klucz</button>
+  </div>
+  <div class="mini-note">Klucz API potrzebny do funkcji "Wklej przepis". Uzyskasz go na <strong>console.anthropic.com</strong>. Klucz jest przechowywany tylko lokalnie na urządzeniu.</div>
+
+  <h4>📷 Rozpoznawanie zdjęć listy</h4>
+  <div class="camera-row" style="margin-top:6px;">
+    <button class="btn-small" onclick="triggerImageImport()">📷 Zeskanuj zdjęcie listy</button>
+  </div>
+  <div class="mini-note">Zdjęcia analizuje Claude Vision — rozpoznaje listy zakupów, składniki przepisów, zrzuty ekranu, odręczne notatki. Wymaga klucza Anthropic API (ustawionego powyżej).</div>
+</div>
+
+<div class="panel" id="aiPanel" style="display:none">
+  <h3>✨ Asystent AI</h3>
+  <div class="plan-modes">
+    <button class="plan-mode-btn active" id="modeDishToProducts" onclick="setPlannerMode('dish-to-products')">Danie → produkty</button>
+    <button class="plan-mode-btn" id="modeProductsToDish" onclick="setPlannerMode('products-to-dish')">Produkty → danie</button>
+    <button class="plan-mode-btn" id="modePasteRecipe" onclick="setPlannerMode('paste-recipe')">📋 Wklej przepis</button>
+    <button class="plan-mode-btn" id="modePasteList" onclick="setPlannerMode('paste-list')">📝 Wklej listę</button>
+    <button class="plan-mode-btn" id="modeMyRecipes" onclick="setPlannerMode('my-recipes')">📚 Moje przepisy</button>
+  </div>
+  <div class="dish-row" id="dishInputRow">
+    <input class="dish-input" id="dishInput" placeholder="np. spaghetti bolognese albo: makaron, pomidory, ser" onkeydown="if(event.key==='Enter')runPlanner()">
+    <button class="btn-ai" id="btnPlan" onclick="runPlanner()">Szukaj</button>
+  </div>
+  <div id="pasteRecipeRow" style="display:none">
+    <textarea class="config-textarea" id="recipeInput" placeholder="Wklej tu dowolny tekst z przepisu, zrzut ekranu z listą, opis zakupów — Claude wyciągnie tylko produkty..." style="min-height:130px;margin-bottom:8px"></textarea>
+    <button class="btn-ai" style="width:100%" id="btnParseRecipe" onclick="runRecipeParser()">🤖 Wyciągnij produkty z tekstu</button>
+  </div>
+  <div id="pasteListRow" style="display:none">
+    <textarea class="config-textarea" id="pasteListInput" placeholder="Wklej listę składników po przecinku lub każdy w nowej linii:&#10;&#10;600 g risotto, 500 g piersi z kurczaka, 3 papryki, 2 łyżki oliwy..." style="min-height:110px;margin-bottom:8px"></textarea>
+    <div style="display:flex;gap:8px">
+      <button class="btn-ai" style="flex:1" onclick="pasteListToShopping()">🛒 Dodaj do listy</button>
+      <button class="btn-ai" style="flex:1;background:var(--surface2);color:var(--text)" onclick="pasteListToRecipe()">📖 Zapisz jako przepis</button>
+    </div>
+  </div>
+  <div id="myRecipesRow" style="display:none">
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input class="dish-input" id="recipeSearchInput" placeholder="Szukaj przepisu..." oninput="renderMyRecipesList()" style="flex:1">
+      <button class="btn-ai" onclick="openRecipeEditor(null)" style="white-space:nowrap">+ Nowy</button>
+    </div>
+    <div id="myRecipesList"></div>
+  </div>
+  <div class="mini-note" id="aiPanelNote">TheMealDB + lokalna baza polskich dań. Awaryjnie: lokalne podpowiedzi.</div>
+  <div id="aiStatus"></div>
+</div>
+
+<div class="ai-suggestions" id="aiSuggestions">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div class="ai-label" id="aiLabel">Sugestie — kliknij, żeby dodać</div>
+    <button class="btn-small" id="btnSaveRecipe" style="display:none;font-size:12px;padding:5px 10px" onclick="openSaveRecipeModal()">💾 Zapisz przepis</button>
+  </div>
+  <div class="suggestions-grid" id="suggestionsGrid"></div>
+</div>
+
+<div id="itemsContainer"></div>
+<div class="section-spacer"></div>
+<div class="bottom-actions">
+  <button class="btn-secondary" onclick="suggestFromCurrentList()">🤖 Pomysły z listy</button>
+  <button class="btn-primary" onclick="shareList()">📤 Udostępnij listę</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+const CATS = {
+  'warzywa i owoce': { color:'#6a9e4f', emoji:'🥬' },
+  'nabiał':          { color:'#c8a045', emoji:'🥛' },
+  'mięso i ryby':    { color:'#b05a4a', emoji:'🥩' },
+  'pieczywo':        { color:'#c47a35', emoji:'🍞' },
+  'mrożonki':        { color:'#5a8aa0', emoji:'🧊' },
+  'napoje':          { color:'#7a6aaa', emoji:'🥤' },
+  'przyprawy':        { color:'#c4873b', emoji:'🧂' },
+  'chemia i kosmetyki': { color:'#a07050', emoji:'🧴' },
+  'inne':            { color:'#8a8070', emoji:'📦' },
+};
+const DEFAULT_CAT_ORDER = Object.keys(CATS);
+const STORAGE_ITEMS = 'zakupy_items';
+const STORAGE_ORDER = 'zakupy_category_order';
+const STORAGE_FIREBASE_CONFIG = 'zakupy_firebase_config';
+const STORAGE_OCR_KEY = 'zakupy_ocr_key';
+const STORAGE_USER_EMAIL = 'zakupy_last_email';
+const STORAGE_ANTHROPIC_KEY = 'zakupy_anthropic_key';
+const STORAGE_RECIPES = 'zakupy_recipes';
+const STORAGE_SHOW_DONE = 'zakupy_show_done';
+const STORAGE_CAT_MEMORY = 'zakupy_cat_memory';
+const NETWORK_MEALDB_BASE = 'https://www.themealdb.com/api/json/v1/1';
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyCWFWADTI4CEqXVwcDq8OpiZeN4a7CjRXg',
+  authDomain: 'zakupy-aa236.firebaseapp.com',
+  projectId: 'zakupy-aa236',
+  storageBucket: 'zakupy-aa236.firebasestorage.app',
+  messagingSenderId: '308624028322',
+  appId: '1:308624028322:web:15e0587200caa418a09dfb'
+};
+
+let items = JSON.parse(localStorage.getItem(STORAGE_ITEMS) || '[]');
+let currentFilter = 'all';
+let showBought = JSON.parse(localStorage.getItem(STORAGE_SHOW_DONE) || 'false');
+let aiPanelOpen = false;
+let settingsOpen = false;
+let collapsedCats = new Set();
+let recognition = null;
+let isRecording = false;
+let transcriptBuffer = '';
+let plannerMode = 'dish-to-products';
+let categoryOrder = loadCategoryOrder();
+let firebaseApp = null;
+let firebaseAuth = null;
+let firebaseDb = null;
+let firebaseReady = false;
+let currentUser = null;
+let unsubscribeList = null;
+let lastCloudPayloadHash = '';
+let saveCloudTimer = null;
+let ocrBusy = false;
+let firebasePersistenceReady = false;
+let firebaseAuthListenerAttached = false;
+
+const CAT_KEYWORDS = {
+  'warzywa i owoce': [
+    'pomidor','ogórek','sałat','marchew','ziemniak','cebul','czosnek','papryka',
+    'papryka czerwon','papryka zielon','papryka żółt','papryka śwież','brokuł',
+    'jabłko','jabłk','banan','cytryn','pomarańcz','gruszk','śliwk','truskawk','malin',
+    'winogrona','mandarynk','awokado','szpinak','kapusta','burak','bazylia','natka',
+    'koper','pietruszk','por ','grzyb','kalafior','seler','rzodkiewk','dynia','cukini',
+    'rukola','oliwk','passata','kukurydza','fasolk','groszek','szczypior','rzodkiewka',
+    'pieczark','borowik','bakłażan','szalotk','dymk','imbir','chili','jalapeño',
+    'mango','ananas','kokos','arbuz','melon','kiwi','morela','brzoskwini','wisni','czereśni',
+    'agrest','porzeczk','borówk','żurawina','granat','fig','daktyl','limonk',
+    'sałata','rucola','endywia','por','ziół','liść','listk','śwież',
+  ],
+  'nabiał': [
+    'mleko','jogurt','ser ','sery','masło','śmietan','jajk','jajec','jajo','twaróg',
+    'kefir','maślanka','śmietanka','ricotta','mozzarella','parmezan','feta','brie',
+    'camembert','skyr','serek','margaryna','cheddar','gouda','edam','bündner',
+    'mascarpone','śmietana','mleczko','napój roślinny','owsiany','migdałowy','sojowy',
+    'jajka','jaj','żółtko','białko','ser żółty','ser twardy','ser pleśniowy',
+  ],
+  'mięso i ryby': [
+    'kurczak','wieprzowina','wołowina','łosoś','tuńczyk','krewetk','indyk','kiełbas',
+    'szynk','boczek','mielon','polędwic','żeberka','schab','kotlet','filet','dorsz',
+    'pstrąg','makrela','sardynk','salami','chorizo','jagnięcin','karp','halibut',
+    'mintaj','tilapia','krewetki','małże','krab','ośmiornica','kalmar','śledź',
+    'szprotki','wędlin','kabanos','pasztet','mięso','ryba','drób','cielęcin',
+    'gęś','kaczka','królik','dziczyzna','wątróbka','serca','żołądki','podroby',
+    'mortadela','prosciutto','bekon','parówk','frankfurter',
+  ],
+  'pieczywo': [
+    'chleb','bułk','bagietk','ciabatt','tortilla','pita','rogalik','croissant',
+    'mąka','drożdże','makaron','ryż','kasza','płatki','pieczywo','tost','bochenek',
+    'bułka tarta','graham','razow','pumpernikiel','chałka','obwarzanek','preczel',
+    'wafle','herbatniki','biszkopty','krakersy','grissini','wytrawne','słodkie',
+    'spaghetti','penne','fusilli','rigatoni','lasagne','tagliatelle','gnocchi',
+    'ryż basmati','ryż jaśminowy','kuskus','bulgur','komosa','quinoa','amarantus',
+    'owsianka','musli','granola','kukurydziane','chrupki',
+  ],
+  'mrożonki': [
+    'mrożon','lody','zamrożon','pizza mrożona','frytki mrożone','warzywa mrożone',
+    'mrożone warzywa','mrożona','mrożony','mrożone',
+  ],
+  'napoje': [
+    'woda','sok','cola','piwo','wino','herbata','kawa','napój','lemoniada','koktajl',
+    'napój energetyczny','sok pomarańczowy','sok jabłkowy','sok pomidorowy',
+    'sprite','pepsi','fanta','redbull','monster','isoton','gazowany','niegazowany',
+    'tonik','kombucha','kefir wodny','napar','syrop','koncentrat soku',
+  ],
+  'przyprawy': [
+    'przypraw','pieprz','sól','oregano','bazylia susz','tymianek','rozmaryn','kurkuma',
+    'papryka słodk','papryka ostr','papryka wędzon','papryka mielon','papryka w proszku',
+    'cynamon','imbir mielon','gałka muszkat','curry','chili mielon',
+    'zioła prowansalsk','kminek','kmin','majeranek','lubczyk','liść laurow','ziele angielski',
+    'gorczyc','musztard','ketchup','sos sojow','ocet','olej','oliwa','przyprawa','vegeta',
+    'aromat','bulion','kostka rosołow','maggi','tabasco','sriracha','wasabi','harissa',
+    'garam masala','szafran','kardamon','kolendra mielon','anyż','wanilia','ekstrakt',
+    'sezam','mak','nasion','siemię','czarnuszk',
+  ],
+  'chemia i kosmetyki': [
+    'szampon','żel','mydło','pasta do zębów','proszek','płyn do','środek','chemia',
+    'papier toalet','ręcznik papier','dezodorant','krem','balsam','podpaska','tampon',
+    'tabletki do zmywarki','płyn do naczyń','gąbka','worki na śmieci','szczotka',
+    'pasta','płyn','ściereczk','zmywak','odplamiacz','wybielacz','ocet do sprzątania',
+    'odświeżacz','odkamieniacz','wiadro','rękawiczki','papier','chusteczk','pieluchy',
+    'krem do twarzy','serum','tonik','micelarna','szminki','podkład','tusz','cień',
+    'perfumy','woda toaletowa','dezodorant','antyperspirant','maszynka','żyletk',
+  ],
+};
+
+// ── Pamięć kategorii (nauka z korekt) ─────────────────
+let catMemoryCache = null; // cache w pamięci
+
+function loadCatMemory() {
+  if (catMemoryCache) return catMemoryCache;
+  try { catMemoryCache = JSON.parse(localStorage.getItem(STORAGE_CAT_MEMORY) || '{}'); }
+  catch { catMemoryCache = {}; }
+  return catMemoryCache;
+}
+function saveCatMemory(mem) {
+  catMemoryCache = mem;
+  localStorage.setItem(STORAGE_CAT_MEMORY, JSON.stringify(mem));
+}
+function mergeCatMemory(cloudMem) {
+  if (!cloudMem || typeof cloudMem !== 'object') return;
+  const local = loadCatMemory();
+  const merged = { ...cloudMem, ...local }; // lokalne mają priorytet
+  if (JSON.stringify(merged) !== JSON.stringify(local)) saveCatMemory(merged);
+}
+function learnCategory(name, cat) {
+  const mem = loadCatMemory();
+  const key = normalizeName(name);
+  if (!key || key.length < 2) return;
+  mem[key] = cat;
+  // Zapamiętaj też każde znaczące słowo (min. 4 znaki)
+  key.split(' ').forEach(word => {
+    if (word.length >= 4) mem[word] = cat;
+  });
+  saveCatMemory(mem);
+  scheduleCloudSave();
+}
+
+function guessCategory(name) {
+  const n = normalizeName(name);
+  const mem = loadCatMemory();
+  // 1) Dokładne dopasowanie z pamięci
+  if (mem[n]) return mem[n];
+  // 2) Częściowe dopasowanie z pamięci (klucz zawarty w nazwie)
+  for (const [learned, cat] of Object.entries(mem)) {
+    if (learned.length >= 4 && n.includes(learned)) return cat;
+  }
+  // 3) Wbudowany słownik — najdłuższe dopasowanie wygrywa
+  //    (dzięki temu "papryka słodka" → przyprawy, a "papryka" → warzywa)
+  let bestCat = null, bestLen = 0;
+  for (const [cat, keywords] of Object.entries(CAT_KEYWORDS)) {
+    for (const kw of keywords) {
+      const nkw = normalizeName(kw);
+      if (nkw.length > bestLen && n.includes(nkw)) {
+        bestLen = nkw.length;
+        bestCat = cat;
+      }
+    }
+  }
+  return bestCat || 'inne';
+}
+
+const LOCAL_DISH_DB = {
+  'spaghetti bolognese': [
+    { name:'makaron spaghetti', qty:'400 g', cat:'pieczywo' },
+    { name:'mięso mielone wołowe', qty:'400 g', cat:'mięso i ryby' },
+    { name:'passata pomidorowa', qty:'700 ml', cat:'warzywa i owoce' },
+    { name:'cebula', qty:'1 szt.', cat:'warzywa i owoce' },
+    { name:'czosnek', qty:'2 ząbki', cat:'warzywa i owoce' },
+    { name:'parmezan', qty:'50 g', cat:'nabiał' },
+    { name:'oliwa z oliwek', qty:'2 łyżki', cat:'przyprawy' }
+  ],
+  'naleśniki': [
+    { name:'mąka pszenna', qty:'250 g', cat:'pieczywo' },
+    { name:'mleko', qty:'500 ml', cat:'nabiał' },
+    { name:'jajka', qty:'3 szt.', cat:'nabiał' },
+    { name:'masło', qty:'50 g', cat:'nabiał' },
+    { name:'cukier', qty:'1 łyżka', cat:'inne' }
+  ],
+  'kanapki': [
+    { name:'chleb', qty:'1 bochenek', cat:'pieczywo' },
+    { name:'masło', qty:'100 g', cat:'nabiał' },
+    { name:'szynka', qty:'200 g', cat:'mięso i ryby' },
+    { name:'ser żółty', qty:'200 g', cat:'nabiał' },
+    { name:'pomidor', qty:'2 szt.', cat:'warzywa i owoce' },
+    { name:'sałata', qty:'1 główka', cat:'warzywa i owoce' }
+  ],
+  'jajecznica': [
+    { name:'jajka', qty:'4 szt.', cat:'nabiał' },
+    { name:'masło', qty:'30 g', cat:'nabiał' },
+    { name:'szczypiorek', qty:'1 pęczek', cat:'warzywa i owoce' },
+    { name:'chleb', qty:'1 bochenek', cat:'pieczywo' }
+  ],
+  'zupa pomidorowa': [
+    { name:'passata pomidorowa', qty:'700 ml', cat:'warzywa i owoce' },
+    { name:'makaron', qty:'200 g', cat:'pieczywo' },
+    { name:'śmietana', qty:'200 ml', cat:'nabiał' },
+    { name:'cebula', qty:'1 szt.', cat:'warzywa i owoce' },
+    { name:'czosnek', qty:'2 ząbki', cat:'warzywa i owoce' },
+    { name:'bulion warzywny', qty:'1 l', cat:'przyprawy' }
+  ],
+  'rosół': [
+    { name:'kurczak', qty:'1 kg', cat:'mięso i ryby' },
+    { name:'marchew', qty:'3 szt.', cat:'warzywa i owoce' },
+    { name:'pietruszka', qty:'2 szt.', cat:'warzywa i owoce' },
+    { name:'seler', qty:'1/4', cat:'warzywa i owoce' },
+    { name:'por', qty:'1 szt.', cat:'warzywa i owoce' },
+    { name:'cebula', qty:'1 szt.', cat:'warzywa i owoce' },
+    { name:'makaron', qty:'200 g', cat:'pieczywo' }
+  ],
+  'kotlet schabowy': [
+    { name:'schab wieprzowy', qty:'600 g', cat:'mięso i ryby' },
+    { name:'jajka', qty:'2 szt.', cat:'nabiał' },
+    { name:'bułka tarta', qty:'100 g', cat:'pieczywo' },
+    { name:'mąka pszenna', qty:'50 g', cat:'pieczywo' },
+    { name:'ziemniaki', qty:'1 kg', cat:'warzywa i owoce' },
+    { name:'kapusta kiszona', qty:'400 g', cat:'warzywa i owoce' },
+    { name:'olej', qty:'100 ml', cat:'przyprawy' }
+  ],
+  'pierogi': [
+    { name:'mąka pszenna', qty:'500 g', cat:'pieczywo' },
+    { name:'jajka', qty:'2 szt.', cat:'nabiał' },
+    { name:'ziemniaki', qty:'1 kg', cat:'warzywa i owoce' },
+    { name:'twaróg', qty:'300 g', cat:'nabiał' },
+    { name:'cebula', qty:'2 szt.', cat:'warzywa i owoce' },
+    { name:'masło', qty:'100 g', cat:'nabiał' },
+    { name:'śmietana', qty:'200 ml', cat:'nabiał' }
+  ],
+  'żurek': [
+    { name:'zakwas na żurek', qty:'500 ml', cat:'inne' },
+    { name:'kiełbasa biała', qty:'400 g', cat:'mięso i ryby' },
+    { name:'jajka', qty:'4 szt.', cat:'nabiał' },
+    { name:'czosnek', qty:'3 ząbki', cat:'warzywa i owoce' },
+    { name:'śmietana', qty:'200 ml', cat:'nabiał' },
+    { name:'ziemniaki', qty:'500 g', cat:'warzywa i owoce' },
+    { name:'majeranek', qty:'1 łyżka', cat:'przyprawy' }
+  ],
+  'pizza': [
+    { name:'mąka pszenna', qty:'500 g', cat:'pieczywo' },
+    { name:'drożdże', qty:'7 g', cat:'pieczywo' },
+    { name:'passata pomidorowa', qty:'400 ml', cat:'warzywa i owoce' },
+    { name:'mozzarella', qty:'250 g', cat:'nabiał' },
+    { name:'szynka', qty:'150 g', cat:'mięso i ryby' },
+    { name:'papryka', qty:'1 szt.', cat:'warzywa i owoce' },
+    { name:'oliwa z oliwek', qty:'3 łyżki', cat:'przyprawy' }
+  ],
+  'kurczak curry': [
+    { name:'filet z kurczaka', qty:'600 g', cat:'mięso i ryby' },
+    { name:'mleczko kokosowe', qty:'400 ml', cat:'inne' },
+    { name:'pasta curry', qty:'2 łyżki', cat:'przyprawy' },
+    { name:'cebula', qty:'1 szt.', cat:'warzywa i owoce' },
+    { name:'czosnek', qty:'3 ząbki', cat:'warzywa i owoce' },
+    { name:'imbir', qty:'1 kawałek', cat:'warzywa i owoce' },
+    { name:'ryż', qty:'300 g', cat:'pieczywo' },
+    { name:'olej', qty:'2 łyżki', cat:'przyprawy' }
+  ],
+  'sałatka grecka': [
+    { name:'pomidory', qty:'3 szt.', cat:'warzywa i owoce' },
+    { name:'ogórek', qty:'1 szt.', cat:'warzywa i owoce' },
+    { name:'papryka', qty:'1 szt.', cat:'warzywa i owoce' },
+    { name:'ser feta', qty:'200 g', cat:'nabiał' },
+    { name:'oliwki czarne', qty:'100 g', cat:'warzywa i owoce' },
+    { name:'cebula czerwona', qty:'1 szt.', cat:'warzywa i owoce' },
+    { name:'oliwa z oliwek', qty:'4 łyżki', cat:'przyprawy' }
+  ],
+  'ryż z warzywami': [
+    { name:'ryż', qty:'300 g', cat:'pieczywo' },
+    { name:'papryka', qty:'2 szt.', cat:'warzywa i owoce' },
+    { name:'marchew', qty:'2 szt.', cat:'warzywa i owoce' },
+    { name:'cebula', qty:'1 szt.', cat:'warzywa i owoce' },
+    { name:'groszek', qty:'200 g', cat:'warzywa i owoce' },
+    { name:'jajka', qty:'2 szt.', cat:'nabiał' },
+    { name:'sos sojowy', qty:'3 łyżki', cat:'przyprawy' }
+  ],
+  'tost francuski': [
+    { name:'chleb tostowy', qty:'1 op.', cat:'pieczywo' },
+    { name:'jajka', qty:'3 szt.', cat:'nabiał' },
+    { name:'mleko', qty:'100 ml', cat:'nabiał' },
+    { name:'masło', qty:'50 g', cat:'nabiał' },
+    { name:'cukier puder', qty:'2 łyżki', cat:'inne' },
+    { name:'cynamon', qty:'1 łyżeczka', cat:'przyprawy' }
+  ],
+  'owsianka': [
+    { name:'płatki owsiane', qty:'100 g', cat:'pieczywo' },
+    { name:'mleko', qty:'300 ml', cat:'nabiał' },
+    { name:'banan', qty:'1 szt.', cat:'warzywa i owoce' },
+    { name:'miód', qty:'1 łyżka', cat:'inne' },
+    { name:'orzechy', qty:'30 g', cat:'inne' }
+  ],
+  'gulasz wołowy': [
+    { name:'wołowina', qty:'600 g', cat:'mięso i ryby' },
+    { name:'cebula', qty:'2 szt.', cat:'warzywa i owoce' },
+    { name:'marchew', qty:'2 szt.', cat:'warzywa i owoce' },
+    { name:'papryka', qty:'2 szt.', cat:'warzywa i owoce' },
+    { name:'pomidory krojone', qty:'400 g', cat:'warzywa i owoce' },
+    { name:'bulion wołowy', qty:'500 ml', cat:'przyprawy' },
+    { name:'ziemniaki', qty:'800 g', cat:'warzywa i owoce' },
+    { name:'olej', qty:'3 łyżki', cat:'przyprawy' }
+  ],
+  'pasta carbonara': [
+    { name:'makaron spaghetti', qty:'400 g', cat:'pieczywo' },
+    { name:'boczek', qty:'200 g', cat:'mięso i ryby' },
+    { name:'jajka', qty:'4 szt.', cat:'nabiał' },
+    { name:'parmezan', qty:'100 g', cat:'nabiał' },
+    { name:'czosnek', qty:'2 ząbki', cat:'warzywa i owoce' },
+    { name:'śmietanka', qty:'100 ml', cat:'nabiał' }
+  ],
+  'zupa jarzynowa': [
+    { name:'marchew', qty:'3 szt.', cat:'warzywa i owoce' },
+    { name:'ziemniaki', qty:'500 g', cat:'warzywa i owoce' },
+    { name:'por', qty:'1 szt.', cat:'warzywa i owoce' },
+    { name:'seler', qty:'1/4', cat:'warzywa i owoce' },
+    { name:'pietruszka', qty:'1 szt.', cat:'warzywa i owoce' },
+    { name:'fasolka szparagowa', qty:'200 g', cat:'warzywa i owoce' },
+    { name:'bulion warzywny', qty:'1.5 l', cat:'przyprawy' }
+  ],
+  'wrap z kurczakiem': [
+    { name:'tortilla', qty:'4 szt.', cat:'pieczywo' },
+    { name:'filet z kurczaka', qty:'400 g', cat:'mięso i ryby' },
+    { name:'sałata', qty:'1 główka', cat:'warzywa i owoce' },
+    { name:'pomidor', qty:'2 szt.', cat:'warzywa i owoce' },
+    { name:'ser żółty', qty:'100 g', cat:'nabiał' },
+    { name:'śmietana', qty:'100 ml', cat:'nabiał' },
+    { name:'papryka', qty:'1 szt.', cat:'warzywa i owoce' }
+  ]
+};
+
+const INGREDIENT_TRANSLATIONS = {
+  'kurczak':'chicken', 'filet z kurczaka':'chicken_breast', 'wołowina':'beef', 'mięso mielone':'minced_beef', 'mielone':'minced_beef',
+  'ryż':'rice', 'makaron':'pasta', 'spaghetti':'spaghetti', 'ser':'cheese', 'ser żółty':'cheese', 'mozzarella':'mozzarella',
+  'pomidor':'tomato', 'pomidory':'tomato', 'passata':'tomato', 'cebula':'onion', 'czosnek':'garlic', 'ziemniaki':'potato', 'ziemniak':'potato',
+  'papryka':'pepper', 'brokuł':'broccoli', 'jajka':'egg', 'jajko':'egg', 'mleko':'milk', 'chleb':'bread', 'sałata':'lettuce', 'ogórek':'cucumber',
+  'tuńczyk':'tuna', 'łosoś':'salmon', 'krewetki':'prawn', 'fasola':'beans', 'pieczarki':'mushroom', 'grzyby':'mushroom', 'marchew':'carrot',
+  'masło':'butter', 'szynka':'ham', 'boczek':'bacon'
+};
+
+function loadCategoryOrder() {
+  const saved = JSON.parse(localStorage.getItem(STORAGE_ORDER) || 'null');
+  if (!Array.isArray(saved) || !saved.length) return [...DEFAULT_CAT_ORDER];
+  const valid = saved.filter(cat => CATS[cat]);
+  DEFAULT_CAT_ORDER.forEach(cat => { if (!valid.includes(cat)) valid.push(cat); });
+  return valid;
+}
+function saveLocalState() {
+  localStorage.setItem(STORAGE_ITEMS, JSON.stringify(items));
+  localStorage.setItem(STORAGE_ORDER, JSON.stringify(categoryOrder));
+}
+function normalizeName(name) {
+  return (name || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function categoryRank(cat) {
+  const idx = categoryOrder.indexOf(cat);
+  return idx === -1 ? 999 : idx;
+}
+function sortItemsByShopOrder(list) {
+  return [...list].sort((a, b) => {
+    const catDiff = categoryRank(a.cat) - categoryRank(b.cat);
+    if (catDiff !== 0) return catDiff;
+    if (a.done !== b.done) return Number(a.done) - Number(b.done);
+    return a.name.localeCompare(b.name, 'pl', { sensitivity:'base' });
+  });
+}
+function sanitizeItemText(text) {
+  return String(text || '')
+    .replace(/[•·●▪◦‣➤✓✔☐☑]/g, ' ')
+    .replace(/^\s*[-–—*]+\s*/gm, '')
+    .replace(/^\s*\d+[\.)]\s*/gm, '')
+    .replace(/\b[xx]\s?(\d+)\b/gi, '$1')
+    .trim();
+}
+function parseMultipleProducts(rawText) {
+  const text = String(rawText || '');
+
+  // Tryb przepisu: jeśli są linie z myślnikami lub wiele linii — traktuj każdą linię jako osobny składnik
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const hasIngredientLines = lines.some(l => /^\s*[-–—*•]\s+/.test(l) || /^\d/.test(l));
+
+  // Policz przecinki oddzielające produkty (nie wewnątrz liczb jak "0,5")
+  const productCommas = text.replace(/\d,\d/g, '').split(',').length - 1;
+  const isCommaList = productCommas > lines.length;
+
+  if (!isCommaList && (hasIngredientLines || lines.length >= 3)) {
+    const results = [];
+    for (const line of lines) {
+      // Pomiń nagłówki, tytuły i URLe
+      if (/^(składniki|przepis|instrukcja|sposób|przygotowanie|uwagi?|opis)/i.test(line)) continue;
+      if (/https?:\/\//i.test(line)) continue;
+      if (line.length < 3) continue;
+      // Pomiń linie-tytuły: krótkie, bez myślnika/liczby (np. "Naleśniki", "Na 4 porcje")
+      if (!/^\s*[-–—*•]/.test(line) && !/\d/.test(line) && line.length < 40) continue;
+
+      // Usuń myślnik na początku
+      let cleaned = line.replace(/^\s*[-–—*•]\s*/, '').trim();
+
+      // Linia z "przyprawy:" — rozbij po średnikach na osobne produkty
+      if (/^przyprawy\s*:/i.test(cleaned)) {
+        const spicesRaw = cleaned.replace(/^przyprawy\s*:\s*/i, '');
+        spicesRaw.split(/[;,]/).forEach(s => {
+          const sp = cleanIngredientLine(s.trim());
+          if (sp) results.push(sp);
+        });
+        continue;
+      }
+
+      // Odetnij komentarz po myślniku na końcu (np. "400 g ziemniaków - 4 średnie sztuki")
+      cleaned = cleaned.replace(/\s*-\s*\d+\s*(średni|duż|mał|sztuk|szt\.?)[^,]*/i, '');
+
+      const parsed = cleanIngredientLine(cleaned);
+      if (parsed) results.push(parsed);
+    }
+    if (results.length > 0) return results;
+  }
+
+  // Tryb standardowy (lista przez przecinki/średniki)
+  const cleaned = sanitizeItemText(text)
+    .replace(/\s+\n\s+/g, '\n')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/(\d),(\d)/g, '$1\u00B7$2'); // chroń przecinki w liczbach (0,5 → 0·5)
+  return cleaned
+    .split(/[,;\n]|\s+i\s+|\s+oraz\s+|\s+plus\s+/i)
+    .map(s => s.trim())
+    .map(s => s.replace(/\u00B7/g, ',')) // przywróć przecinki w liczbach
+    .map(s => s.replace(/^(dodaj|kup|potrzebuje|potrzebuję|wez|weź|prosze|proszę|poprosze|poproszę)\s+/i, '').trim())
+    .map(s => s.replace(/^[-–—*]\s*/, '').trim())
+    .filter(Boolean);
+}
+
+function cleanIngredientLine(line) {
+  let s = line.trim();
+  if (!s || s.length < 2) return null;
+  // Usuń ilość na końcu w nawiasach lub po myślniku: "- około 375 ml", "- 230 g", "- około 165 g po rozbiciu"
+  s = s.replace(/\s*[-–]\s*(około|ok\.?|mniej więcej)?\s*[\d,.]+ ?(ml|g|kg|l|szt\.?)(\s.*)?$/i, '');
+  // Usuń "np." i alternatywy opisowe na końcu: "np. śląskiej lub podwawelskiej"
+  s = s.replace(/\s*(np\.|lub|albo|ewentualnie)\s+[\w\s]+$/i, (match, p1, offset, str) => {
+    // Zachowaj tylko jeśli to krótki sufiks (nie cała nazwa)
+    return match.length > str.length * 0.5 ? '' : match;
+  });
+  s = s.trim();
+  if (!s || s.length < 2) return null;
+  // Usuń polecenia słowne
+  s = s.replace(/^(dodaj|kup|potrzebuje|potrzebuję|wez|weź|prosze|proszę)\s+/i, '');
+  return s.trim() || null;
+}
+function renderSettings() {
+  const wrap = document.getElementById('settingsList');
+  wrap.innerHTML = categoryOrder.map((cat, index) => {
+    const info = CATS[cat];
+    return `<div class="settings-item"><div class="settings-name">${info.emoji} ${cat}</div>
+      <button class="sort-btn" onclick="moveCategory(${index},-1)" ${index===0?'disabled':''}>↑</button>
+      <button class="sort-btn" onclick="moveCategory(${index},1)" ${index===categoryOrder.length-1?'disabled':''}>↓</button></div>`;
+  }).join('');
+}
+function moveCategory(index, delta) {
+  const next = index + delta;
+  if (next < 0 || next >= categoryOrder.length) return;
+  [categoryOrder[index], categoryOrder[next]] = [categoryOrder[next], categoryOrder[index]];
+  saveAndRender('Zmieniono kolejność kategorii');
+}
+function renderTabs() {
+  const cats = [...new Set(items.map(i => i.cat))].sort((a,b) => categoryRank(a)-categoryRank(b));
+  const tabs = document.getElementById('catTabs');
+  const allBtn = `<button class="tab${currentFilter==='all'?' active':''}" onclick="filterCat('all',this)">Wszystko</button>`;
+  tabs.innerHTML = allBtn + cats.map(c => {
+    const ci = CATS[c] || CATS['inne'];
+    return `<button class="tab${currentFilter===c?' active':''}" onclick="filterCat('${c}',this)">${ci.emoji} ${c}</button>`;
+  }).join('');
+}
+function itemHTML(item) {
+  const catInfo = CATS[item.cat] || CATS['inne'];
+  return `<div class="item${item.done ? ' done' : ''}" id="item_${item.id}">
+    <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${catInfo.color};border-radius:3px 0 0 3px"></div>
+    <div class="item-check" onclick="toggle('${item.id}')">${item.done ? '✓' : ''}</div>
+    <div class="item-info" onclick="toggle('${item.id}')"><div class="item-name">${escapeHtml(item.name)}</div>${item.qty ? `<div class="item-qty">${escapeHtml(item.qty)}</div>` : ''}</div>
+    <div class="qty-controls"><button class="qty-btn" onclick="changeQty('${item.id}',-1)">−</button><span class="qty-val">${item.amount || 1}</span><button class="qty-btn" onclick="changeQty('${item.id}',1)">+</button></div>
+    <button class="item-edit" onclick="openEditModal('${item.id}')">✏️</button>
+    <button class="item-del" onclick="deleteItem('${item.id}')">✕</button>
+  </div>`;
+}
+function render() {
+  const container = document.getElementById('itemsContainer');
+  const source = currentFilter === 'all' ? items : items.filter(i => i.cat === currentFilter);
+  const visibleSource = showBought ? source : source.filter(i => !i.done);
+  const filtered = sortItemsByShopOrder(visibleSource);
+  const total = items.length;
+  const doneCount = items.filter(i => i.done).length;
+  const hiddenBought = items.filter(i => i.done && (currentFilter === 'all' || i.cat === currentFilter)).length;
+  const pWrap = document.getElementById('progressWrap');
+  if (total > 0) {
+    pWrap.style.display = 'block';
+    document.getElementById('progressText').textContent = `${doneCount} z ${total} kupione`;
+    const pct = Math.round(doneCount / total * 100);
+    document.getElementById('progressPct').textContent = pct + '%';
+    document.getElementById('progressFill').style.width = pct + '%';
+    const btn = document.getElementById('toggleBoughtBtn');
+    if (btn) btn.textContent = showBought ? 'Ukryj kupione' : `Pokaż kupione${hiddenBought ? ` (${hiddenBought})` : ''}`;
+  } else {
+    pWrap.style.display = 'none';
+  }
+  document.getElementById('listSubtitle').textContent = total === 0 ? 'Lista pusta' : `${total} produktów · ${doneCount} kupione${showBought ? '' : doneCount ? ' · kupione ukryte' : ''}`;
+  if (filtered.length === 0) {
+    const msg = total > 0 && doneCount > 0 && !showBought ? 'Wszystkie widoczne produkty są już kupione' : 'Lista jest pusta';
+    container.innerHTML = `<div class="empty"><div class="emoji">🛒</div><p>${msg}</p></div>`;
+    renderTabs();
+    renderCloudStatus();
+    return;
+  }
+  const groups = {};
+  filtered.forEach(item => { if (!groups[item.cat]) groups[item.cat] = []; groups[item.cat].push(item); });
+  let html = '';
+  categoryOrder.forEach(cat => {
+    const catItems = groups[cat];
+    if (!catItems || !catItems.length) return;
+    const catInfo = CATS[cat] || CATS['inne'];
+    const collapsed = collapsedCats.has(cat);
+    const activeCnt = catItems.filter(i => !i.done).length;
+    html += `<div class="category-section"><div class="cat-header" onclick="toggleCat('${cat}')"><div class="cat-dot" style="background:${catInfo.color}"></div><span class="cat-name">${catInfo.emoji} ${cat}</span><span class="cat-count">${activeCnt > 0 ? activeCnt : '✓'}</span><span class="cat-toggle">${collapsed ? '▸' : '▾'}</span></div>${collapsed ? '' : `<div class="items-list">${catItems.map(itemHTML).join('')}</div>`}</div>`;
+  });
+  container.innerHTML = html;
+  renderTabs();
+  renderCloudStatus();
+}
+function escapeHtml(text) {
+  return String(text || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function saveAndRender(toastMessage) {
+  saveLocalState();
+  render();
+  if (settingsOpen) renderSettings();
+  scheduleCloudSave();
+  if (toastMessage) showToast(toastMessage);
+}
+function addManyItems(rawText) {
+  const parts = parseMultipleProducts(rawText);
+  let added = 0;
+  parts.forEach(part => { if (addSingleItem(part)) added++; });
+  if (added > 0) showToast(`Dodano ${added} ${added === 1 ? 'produkt' : 'produkty'}`);
+  else showToast('Nie rozpoznano produktów');
+}
+function extractQuantity(raw) {
+  const text = String(raw || '').trim();
+  const qtyPattern = /^(\d+[\.,]?\d*\s?(kg|g|dag|l|ml|szt\.?|op\.?|paczki|paczka|butelki|butelka))\s+(.+)$/i;
+  const qtyMatch = text.match(qtyPattern);
+  if (qtyMatch) return { qty: qtyMatch[1], name: qtyMatch[3] };
+  const prefixCount = text.match(/^(\d+)\s+(.+)$/);
+  if (prefixCount && prefixCount[2].length > 1) return { qty: prefixCount[1] + ' szt.', name: prefixCount[2] };
+  return { qty:'', name:text };
+}
+function addSingleItem(raw, cat, qty) {
+  const parsed = extractQuantity(raw);
+  const text = (parsed.name || '').trim();
+  const finalQty = qty || parsed.qty || '';
+  if (!text) return false;
+  const normalized = normalizeName(text);
+  const itemCat = cat || guessCategory(text);
+  // Szukaj istniejącego produktu tylko po nazwie (ignoruj kategorię i ilość)
+  const existing = items.find(i => normalizeName(i.name) === normalized && !i.done);
+  if (existing) {
+    existing.amount = (existing.amount || 1) + 1;
+    saveAndRender();
+    return true;
+  }
+  const newItem = { id: Date.now().toString() + Math.random().toString(16).slice(2, 6), name:text, cat:itemCat, done:false, amount:1, qty:finalQty };
+  items.push(newItem);
+  saveAndRender();
+  setTimeout(() => document.getElementById('item_' + newItem.id)?.classList.add('item-new'), 10);
+  return true;
+}
+function addItem(name, cat, qty) {
+  const input = document.getElementById('mainInput');
+  const raw = typeof name === 'string' ? name : input.value.trim();
+  if (!raw) return;
+  if (!cat && !qty) {
+    const parts = parseMultipleProducts(raw);
+    if (parts.length > 1) {
+      addManyItems(raw);
+      input.value = '';
+      return;
+    }
+  }
+  const ok = addSingleItem(raw, cat, qty);
+  if (ok && !name) input.value = '';
+}
+function toggle(id) { const item = items.find(i => i.id === id); if (item) { item.done = !item.done; item.doneAt = item.done ? Date.now() : null; saveAndRender(); } }
+function deleteItem(id) { items = items.filter(i => i.id !== id); saveAndRender(); }
+function changeQty(id, delta) { const item = items.find(i => i.id === id); if (item) { item.amount = Math.max(1, (item.amount || 1) + delta); saveAndRender(); } }
+function clearDone() {
+  const cnt = items.filter(i => i.done).length;
+  if (!cnt) return showToast('Brak odhaczonych produktów');
+  items = items.filter(i => !i.done);
+  saveAndRender(`Usunięto ${cnt} produktów`);
+}
+function filterCat(cat, el) { currentFilter = cat; document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); el.classList.add('active'); render(); }
+function autoCleanDone() {
+  const EXPIRE_MS = 6 * 60 * 60 * 1000; // 6 godzin
+  const now = Date.now();
+  const before = items.length;
+  items = items.filter(i => !(i.done && i.doneAt && (now - i.doneAt) >= EXPIRE_MS));
+  if (items.length < before) {
+    saveAndRender();
+    showToast(`Usunięto ${before - items.length} przeterminowanych produktów`);
+  }
+}
+function toggleBoughtVisibility() { showBought = !showBought; localStorage.setItem(STORAGE_SHOW_DONE, JSON.stringify(showBought)); render(); }
+function toggleCat(cat) { collapsedCats.has(cat) ? collapsedCats.delete(cat) : collapsedCats.add(cat); render(); }
+function toggleAIPanel() { aiPanelOpen = !aiPanelOpen; document.getElementById('aiPanel').style.display = aiPanelOpen ? 'block' : 'none'; document.getElementById('btnAI').style.background = aiPanelOpen ? 'rgba(127,255,95,.15)' : ''; }
+function toggleSettingsPanel() { settingsOpen = !settingsOpen; document.getElementById('settingsPanel').style.display = settingsOpen ? 'block' : 'none'; document.getElementById('btnSettings').style.background = settingsOpen ? 'rgba(127,255,95,.15)' : ''; if (settingsOpen) renderSettings(); }
+
+function getSpeechRecognition() { return window.SpeechRecognition || window.webkitSpeechRecognition || null; }
+function toggleVoiceInput() {
+  if (isRecording && recognition) return recognition.stop();
+  const SpeechRecognition = getSpeechRecognition();
+  if (!SpeechRecognition) return showToast('Twoja przeglądarka nie obsługuje dyktowania');
+  transcriptBuffer = '';
+  recognition = new SpeechRecognition();
+  recognition.lang = 'pl-PL';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+  recognition.onstart = () => {
+    isRecording = true;
+    document.getElementById('btnMic').classList.add('recording');
+    showToast('Słucham… mów produkty jeden po drugim');
+  };
+  recognition.onresult = (event) => {
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const text = event.results[i][0].transcript.trim();
+      if (event.results[i].isFinal) {
+        // Każde finalne zdanie → od razu dodaj jako osobny produkt / lista
+        if (text) {
+          addManyItems(text);
+          transcriptBuffer = ''; // wyczyść bufor po dodaniu
+        }
+      } else {
+        interim = text;
+      }
+    }
+    // Pokaż tylko tymczasowy tekst w polu
+    document.getElementById('mainInput').value = interim;
+  };
+  recognition.onerror = event => {
+    const map = {
+      'not-allowed': 'Brak zgody na mikrofon',
+      'service-not-allowed': 'Usługa rozpoznawania mowy jest zablokowana',
+      'no-speech': 'Nie wykryto mowy',
+      'audio-capture': 'Nie wykryto mikrofonu'
+    };
+    showToast(map[event.error] || ('Błąd dyktowania: ' + event.error));
+  };
+  recognition.onend = () => {
+    isRecording = false;
+    document.getElementById('btnMic').classList.remove('recording');
+    document.getElementById('mainInput').value = '';
+  };
+  recognition.start();
+}
+
+function setPlannerMode(mode) {
+  plannerMode = mode;
+  ['modeDishToProducts','modeProductsToDish','modePasteRecipe','modePasteList','modeMyRecipes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+  const modeToId = { 'dish-to-products':'modeDishToProducts', 'products-to-dish':'modeProductsToDish', 'paste-recipe':'modePasteRecipe', 'paste-list':'modePasteList', 'my-recipes':'modeMyRecipes' };
+  if (modeToId[mode]) document.getElementById(modeToId[mode])?.classList.add('active');
+  document.getElementById('dishInputRow').style.display = ['paste-recipe','paste-list','my-recipes'].includes(mode) ? 'none' : 'flex';
+  document.getElementById('pasteRecipeRow').style.display = mode === 'paste-recipe' ? 'block' : 'none';
+  document.getElementById('pasteListRow').style.display = mode === 'paste-list' ? 'block' : 'none';
+  document.getElementById('myRecipesRow').style.display = mode === 'my-recipes' ? 'block' : 'none';
+  const notes = {
+    'dish-to-products': 'TheMealDB + lokalna baza polskich dań.',
+    'products-to-dish': 'Wpisz co masz w lodówce — dostaniesz propozycje dań.',
+    'paste-recipe': 'Claude AI przeanalizuje tekst i wyciągnie wyłącznie produkty zakupowe.',
+    'paste-list': 'Wklej listę składników — od razu trafią na listę zakupów lub zapisz jako przepis.',
+    'my-recipes': 'Twoje przepisy — kliknij danie aby dodać składniki do listy.'
+  };
+  document.getElementById('aiPanelNote').textContent = notes[mode] || '';
+  if (!['paste-recipe','paste-list','my-recipes'].includes(mode))
+    document.getElementById('dishInput').placeholder = mode === 'dish-to-products' ? 'np. spaghetti bolognese, ramen, curry...' : 'np. makaron, pomidory, ser, kurczak';
+  if (mode === 'my-recipes') renderMyRecipesList();
+  document.getElementById('aiStatus').innerHTML = '';
+}
+
+function parsePasteListInput() {
+  const raw = document.getElementById('pasteListInput').value.trim();
+  if (!raw) { showToast('Wklej najpierw listę składników'); return null; }
+  const parts = raw.split(/[,;\n]/).map(s => s.trim().replace(/\.+$/, '')).filter(Boolean);
+  return parts.map(part => {
+    const { qty, name } = extractQuantityFromText(part);
+    return { name, qty, cat: guessCategory(name) };
+  }).filter(p => p.name);
+}
+function pasteListToShopping() {
+  const products = parsePasteListInput();
+  if (!products) return;
+  products.forEach(p => addSingleItem(p.name, p.cat, p.qty));
+  showToast(`✓ Dodano ${products.length} składników do listy`);
+  document.getElementById('pasteListInput').value = '';
+  if (aiPanelOpen) toggleAIPanel();
+}
+function pasteListToRecipe() {
+  const products = parsePasteListInput();
+  if (!products) return;
+  openRecipeEditor(null, '', products);
+}
+
+async function runRecipeParser() {
+  const text = document.getElementById('recipeInput').value.trim();
+  if (!text) return showToast('Wklej najpierw tekst przepisu');
+  const apiKey = getAnthropicKey();
+  if (!apiKey) {
+    toggleSettingsPanel();
+    return showToast('Najpierw wpisz klucz Claude AI w ustawieniach ⚙');
+  }
+  const btn = document.getElementById('btnParseRecipe');
+  const status = document.getElementById('aiStatus');
+  btn.disabled = true;
+  status.innerHTML = `<div class="ai-loading"><div class="spinner"></div>Claude analizuje tekst...</div>`;
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `Przeanalizuj poniższy tekst i wyciągnij z niego TYLKO produkty które trzeba kupić w sklepie. Zignoruj tytuły, opisy, instrukcje, URLe, komentarze, przyprawy domowe (sól, pieprz chyba że w dużych ilościach), ilości i jednostki miary — chcę tylko nazwy produktów.
+
+Odpowiedz WYŁĄCZNIE jako JSON w formacie:
+{"products":[{"name":"nazwa produktu po polsku","qty":"ilość z jednostką lub pusty string","cat":"jedna z kategorii"}]}
+
+Dostępne kategorie: warzywa i owoce, nabiał, mięso i ryby, pieczywo, mrożonki, napoje, przyprawy, chemia i kosmetyki, inne
+
+Tekst do analizy:
+${text}`
+        }]
+      })
+    });
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error?.message || `HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    const raw = data.content?.map(c => c.text || '').join('').trim() || '';
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Brak JSON w odpowiedzi');
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.products?.length) throw new Error('Brak produktów');
+    const products = parsed.products.map(p => ({
+      name: p.name,
+      qty: p.qty || '',
+      cat: CATS[p.cat] ? p.cat : guessCategory(p.name)
+    }));
+    renderSuggestionChips(products, `Produkty z przepisu (${products.length})`, 'products');
+    status.innerHTML = `<div style="font-size:12px;color:var(--accent2);margin-top:8px">✓ Claude wyciągnął ${products.length} produktów — kliknij aby dodać</div>`;
+  } catch(e) {
+    const errMsg = e.message || String(e);
+    status.innerHTML = `<div style="font-size:12px;color:var(--warning);margin-top:8px">Błąd: ${escapeHtml(errMsg)}</div>`;
+    showToast('Błąd parsowania przepisu');
+  } finally {
+    btn.disabled = false;
+  }
+}
+function escapeJs(text) { return String(text || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' '); }
+
+let editingItemId = null;
+function openEditModal(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  editingItemId = id;
+  document.getElementById('editName').value = item.name;
+  document.getElementById('editQty').value = item.qty || '';
+  document.getElementById('editAmount').value = item.amount || 1;
+  const sel = document.getElementById('editCat');
+  sel.innerHTML = Object.keys(CATS).map(c => `<option value="${c}"${c===item.cat?' selected':''}>${CATS[c].emoji} ${c}</option>`).join('');
+  document.getElementById('editModal').classList.add('open');
+  document.body.classList.add('modal-open');
+}
+function closeEditModal(e) {
+  if (e && e.target !== document.getElementById('editModal')) return;
+  document.getElementById('editModal').classList.remove('open');
+  document.body.classList.remove('modal-open');
+  editingItemId = null;
+}
+function saveEdit() {
+  if (!editingItemId) return;
+  const item = items.find(i => i.id === editingItemId);
+  if (!item) return;
+  const name = document.getElementById('editName').value.trim();
+  if (!name) return showToast('Nazwa nie może być pusta');
+  const newCat = document.getElementById('editCat').value;
+  // Zapamiętaj korektę jeśli kategoria się zmieniła
+  if (newCat !== item.cat) learnCategory(name, newCat);
+  item.name = name;
+  item.qty = document.getElementById('editQty').value.trim();
+  item.amount = Math.max(1, parseInt(document.getElementById('editAmount').value) || 1);
+  item.cat = newCat;
+  document.getElementById('editModal').classList.remove('open');
+  document.body.classList.remove('modal-open');
+  editingItemId = null;
+  saveAndRender('Zapisano zmiany');
+}
+
+// ── Książka kucharska ──────────────────────────────────
+let pendingRecipeProducts = null;
+let lastSuggestedProducts = [];
+let editingRecipeId = null;
+
+function loadRecipes() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_RECIPES) || '[]'); } catch { return []; }
+}
+function saveRecipes(recipes, triggerSync) {
+  localStorage.setItem(STORAGE_RECIPES, JSON.stringify(recipes));
+  if (triggerSync) scheduleCloudSave();
+}
+
+// --- Zapis z AI (stary flow: wyniki asystenta → zapisz) ---
+function openSaveRecipeModal() {
+  if (!lastSuggestedProducts.length) return showToast('Brak produktów do zapisania');
+  // Otwiera edytor z wypełnionymi składnikami z AI
+  const dishName = document.getElementById('dishInput')?.value.trim() || '';
+  openRecipeEditor(null, dishName, lastSuggestedProducts);
+}
+function closeSaveRecipeModal(e) {
+  closeRecipeEditor(e);
+}
+function confirmSaveRecipe() {
+  saveRecipeFromEditor();
+}
+
+// --- Edytor przepisu (ręczny + z AI) ---
+function openRecipeEditor(id, prefillName, prefillProducts) {
+  editingRecipeId = id || null;
+  const recipe = id ? loadRecipes().find(r => r.id === id) : null;
+  document.getElementById('recipeEditorTitle').textContent = id ? '✏️ Edytuj przepis' : '📖 Nowy przepis';
+  document.getElementById('reName').value = recipe?.name || prefillName || '';
+  document.getElementById('reTags').value = recipe?.tags?.join(', ') || '';
+  // Wypełnij składniki
+  const products = recipe?.products || prefillProducts || [];
+  document.getElementById('reIngredientsList').innerHTML = '';
+  if (products.length) {
+    products.forEach(p => addIngredientRow(p.name, p.qty));
+  } else {
+    addIngredientRow(); addIngredientRow(); addIngredientRow();
+  }
+  document.getElementById('recipeEditorModal').classList.add('open');
+  document.body.classList.add('modal-open');
+  setTimeout(() => document.getElementById('reName').focus(), 100);
+}
+function closeRecipeEditor(e) {
+  if (e && e.target !== document.getElementById('recipeEditorModal')) return;
+  document.getElementById('recipeEditorModal').classList.remove('open');
+  document.body.classList.remove('modal-open');
+  editingRecipeId = null;
+}
+function addIngredientRow(name, qty) {
+  const list = document.getElementById('reIngredientsList');
+  const row = document.createElement('div');
+  row.className = 'ingredient-row';
+  row.innerHTML = `
+    <input class="ing-name" type="text" placeholder="Składnik" value="${escapeHtml(name||'')}">
+    <input class="ing-qty" type="text" placeholder="Ilość" value="${escapeHtml(qty||'')}">
+    <button class="ing-del" onclick="this.parentElement.remove()">✕</button>`;
+  list.appendChild(row);
+  if (!name) row.querySelector('.ing-name').focus();
+}
+function splitPastedIngredients() {
+  const input = document.getElementById('reIngredientsPaste');
+  const raw = input.value.trim();
+  if (!raw) return;
+  const parts = raw.split(/[,;\n]/).map(s => s.trim().replace(/\.+$/, '')).filter(Boolean);
+  if (parts.length < 2 && !raw.includes(',')) return;
+  parts.forEach(part => {
+    const { qty, name } = extractQuantityFromText(part);
+    if (name) addIngredientRow(name, qty);
+  });
+  input.value = '';
+}
+function extractQuantityFromText(text) {
+  let t = text.trim();
+
+  // Usuń nawias z ilością na końcu: "3 kolorowe papryki (600 g)" → "3 kolorowe papryki"
+  t = t.replace(/\s*\(\d+[\.,]?\d*\s*(?:kg|g|dag|l|ml|szt\.?)\)/gi, '').trim();
+
+  // Usuń szczypta/garść/do smaku — bez ilości, tylko nazwa
+  const noQtyMatch = t.match(/^(szczypta|garść|kilka|odrobina|do smaku)\s+(.+)$/i);
+  if (noQtyMatch) return { qty: noQtyMatch[1], name: noQtyMatch[2] };
+
+  // Ułamki: "1/4 łyżeczki kurkumy" → qty:"1/4 łyżeczki", name:"kurkuma"
+  const fractionMatch = t.match(/^(\d+\/\d+)\s+(łyżeczk[ia]|łyżk[ia]|szklanki?|szklank[ia])\s+(.+)$/i);
+  if (fractionMatch) return { qty: `${fractionMatch[1]} ${fractionMatch[2]}`, name: fractionMatch[3] };
+
+  // Liczba + jednostka + nazwa: "300 g boczku", "125 ml bulionu", "2 łyżki oliwy"
+  const unitMatch = t.match(/^(\d+[\.,]?\d*\s*(?:kg|g|dag|l|ml|szt\.?|op\.?|łyżeczk[ia]|łyżk[ia]|szklanki?|szklank[ia]|ząbk[ió]w?|pęczk[ói]w?|sztuk[ia]?))\s+(.+)$/i);
+  if (unitMatch) return { qty: unitMatch[1].trim(), name: unitMatch[2].trim() };
+
+  // Sama liczba: "3 kolorowe papryki"
+  const countMatch = t.match(/^(\d+)\s+(.+)$/);
+  if (countMatch) return { qty: `${countMatch[1]} szt.`, name: countMatch[2].trim() };
+
+  return { qty: '', name: t };
+}
+function saveRecipeFromEditor() {
+  const name = document.getElementById('reName').value.trim();
+  if (!name) return showToast('Podaj nazwę dania');
+  const tagsRaw = document.getElementById('reTags').value.trim();
+  const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+  const rows = document.querySelectorAll('#reIngredientsList .ingredient-row');
+  const products = [];
+  rows.forEach(row => {
+    const n = row.querySelector('.ing-name').value.trim();
+    const q = row.querySelector('.ing-qty').value.trim();
+    if (n) products.push({ name: n, qty: q, cat: guessCategory(n) });
+  });
+  if (!products.length) return showToast('Dodaj co najmniej jeden składnik');
+  const recipes = loadRecipes();
+  const recipe = {
+    id: editingRecipeId || Date.now().toString(),
+    name, tags, products, savedAt: Date.now()
+  };
+  const idx = recipes.findIndex(r => r.id === recipe.id);
+  if (idx >= 0) { recipes[idx] = recipe; showToast(`✓ Zaktualizowano: ${name}`); }
+  else { recipes.unshift(recipe); showToast(`✓ Zapisano: ${name}`); }
+  saveRecipes(recipes, true);
+  document.getElementById('recipeEditorModal').classList.remove('open');
+  document.body.classList.remove('modal-open');
+  editingRecipeId = null;
+  pendingRecipeProducts = null;
+  if (plannerMode === 'my-recipes') renderMyRecipesList();
+}
+
+// --- Lista przepisów ---
+function renderMyRecipesList() {
+  const recipes = loadRecipes();
+  const search = (document.getElementById('recipeSearchInput')?.value || '').toLowerCase();
+  const filtered = search
+    ? recipes.filter(r => r.name.toLowerCase().includes(search) || r.tags.some(t => t.toLowerCase().includes(search)))
+    : recipes;
+  const wrap = document.getElementById('myRecipesList');
+  if (!filtered.length) {
+    wrap.innerHTML = `<div class="recipes-empty">${recipes.length === 0
+      ? '📚 Brak przepisów.<br><br>Kliknij <strong>+ Nowy</strong> żeby dodać ręcznie,<br>lub wyszukaj danie przez AI i kliknij 💾.'
+      : '🔍 Brak wyników dla "' + escapeHtml(search) + '"'}</div>`;
+    return;
+  }
+  wrap.innerHTML = filtered.map(r => `
+    <div class="recipe-item">
+      <div style="flex:1;min-width:0" onclick="useRecipe('${r.id}')">
+        <div class="recipe-name">${escapeHtml(r.name)}</div>
+        <div class="recipe-meta">${r.products.length} składników · ${new Date(r.savedAt).toLocaleDateString('pl')}</div>
+        ${r.tags.length ? `<div class="recipe-tags">${r.tags.map(t=>`<span class="recipe-tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+      </div>
+      <button class="recipe-del" style="color:var(--accent2);font-size:13px;width:auto;padding:4px 8px" onclick="openRecipeEditor('${r.id}')">✏️</button>
+      <button class="recipe-del" onclick="deleteRecipe(event,'${r.id}')">✕</button>
+    </div>`).join('');
+}
+
+function useRecipe(id) {
+  const recipe = loadRecipes().find(r => r.id === id);
+  if (!recipe) return;
+  let added = 0;
+  recipe.products.forEach(p => { if (addSingleItem(p.name, p.cat, p.qty)) added++; });
+  showToast(`✓ Dodano ${added} składników z "${recipe.name}"`);
+  // Zamknij panel AI
+  if (aiPanelOpen) toggleAIPanel();
+}
+
+function loadRecipe(id) { useRecipe(id); } // backward compat
+
+function deleteRecipe(e, id) {
+  e.stopPropagation();
+  saveRecipes(loadRecipes().filter(r => r.id !== id), true);
+  renderMyRecipesList();
+  showToast('Usunięto przepis');
+}
+function renderSuggestionChips(entries, label, mode) {
+  const grid = document.getElementById('suggestionsGrid');
+  document.getElementById('aiLabel').textContent = label;
+  if (mode === 'products') {
+    lastSuggestedProducts = entries;
+    grid.innerHTML = entries.map(p => `<div class="suggestion-chip" onclick="addSuggestion('${escapeJs(p.name)}','${escapeJs(p.cat)}','${escapeJs(p.qty || '')}')"><span>+</span>${escapeHtml(p.name)}${p.qty ? ` <span style="font-size:11px;color:var(--text-dim)">${escapeHtml(p.qty)}</span>` : ''}</div>`).join('');
+    document.getElementById('btnSaveRecipe').style.display = 'inline-flex';
+  } else {
+    lastSuggestedProducts = [];
+    grid.innerHTML = entries.map(d => `<div class="suggestion-chip" onclick="fillDishFromSuggestion('${escapeJs(d.name)}')">🍽 ${escapeHtml(d.name)}</div>`).join('');
+    document.getElementById('btnSaveRecipe').style.display = 'none';
+  }
+  document.getElementById('aiSuggestions').classList.toggle('visible', entries.length > 0);
+}
+function fillDishFromSuggestion(dish) { document.getElementById('dishInput').value = dish; setPlannerMode('dish-to-products'); runPlanner(); }
+function addSuggestion(name, cat, qty) { addItem(name, cat, qty); showToast(`Dodano: ${name}`); }
+function normalizeIngredientQuery(product) {
+  const normalized = normalizeName(product);
+  const direct = INGREDIENT_TRANSLATIONS[normalized];
+  if (direct) return direct;
+  const found = Object.entries(INGREDIENT_TRANSLATIONS).find(([pl]) => normalized.includes(pl));
+  return found ? found[1] : normalized.replace(/\s+/g, '_');
+}
+const DISH_TRANSLATIONS = {
+  'spaghetti bolognese':'spaghetti bolognese','spaghetti':'spaghetti','makaron bolognese':'spaghetti bolognese',
+  'pizza':'pizza margherita','pizza margherita':'pizza margherita','pizza hawajska':'hawaiian pizza',
+  'kurczak curry':'chicken curry','curry z kurczaka':'chicken curry','curry':'chicken curry',
+  'pierś z kurczaka':'chicken breast','filet z kurczaka':'chicken breast','kurczak pieczony':'roast chicken',
+  'kurczak':'chicken fajitas','kotlet z kurczaka':'chicken katsu',
+  'rosół':'chicken soup','zupa pomidorowa':'tomato soup','zupa jarzynowa':'vegetable soup',
+  'zupa grzybowa':'mushroom soup','zupa cebulowa':'french onion soup','zupa krem':'cream of tomato soup',
+  'gulasz wołowy':'beef stew','gulasz':'beef goulash','wołowina':'beef wellington',
+  'kotlet schabowy':'pork chops','schab':'pork roast','żeberka':'pork ribs',
+  'łosoś':'salmon','ryba':'fish pie','dorsz':'fish and chips',
+  'sałatka grecka':'greek salad','sałatka cezar':'caesar salad','sałatka':'salad nicoise',
+  'naleśniki':'crepes','naleśnik':'crepes',
+  'pierogi':'dumplings',
+  'ryż z kurczakiem':'chicken fried rice','ryż smażony':'egg fried rice','ryż':'rice pudding',
+  'makaron':'pasta bake','penne':'penne all arrabiata','carbonara':'spaghetti carbonara',
+  'lasagne':'lasagne','lazania':'lasagne',
+  'burger':'big mac','hamburger':'big mac',
+  'tacos':'taco','burrito':'bean and sausage burrito',
+  'ramen':'ramen noodle salad','zupa ramen':'ramen noodle salad',
+  'pad thai':'pad see ew',
+  'owsianka':'porridge','płatki':'oatmeal cookies',
+  'omlet':'omelette','jajecznica':'scrambled eggs',
+  'tost':'french toast','tosty':'french toast',
+  'kanapka':'blt sandwich','kanapki':'club sandwich',
+  'wrap':'chicken wrap',
+  'quesadilla':'quesadillas',
+};
+
+function translateDishToEn(query) {
+  const q = normalizeName(query);
+  // direct match
+  for (const [pl, en] of Object.entries(DISH_TRANSLATIONS)) {
+    if (normalizeName(pl) === q) return en;
+  }
+  // partial match — longest key wins
+  let best = null, bestLen = 0;
+  for (const [pl, en] of Object.entries(DISH_TRANSLATIONS)) {
+    const npk = normalizeName(pl);
+    if ((q.includes(npk) || npk.includes(q)) && npk.length > bestLen) {
+      best = en; bestLen = npk.length;
+    }
+  }
+  return best || query; // fallback: try original (may work for English inputs)
+}
+
+function localDishProductsFallback(dish) {
+  const q = normalizeName(dish);
+  // 1) exact key match
+  const exact = Object.keys(LOCAL_DISH_DB).find(name => normalizeName(name) === q);
+  if (exact) return { dishName: exact, products: LOCAL_DISH_DB[exact] };
+  // 2) partial key match — score by overlap
+  let bestKey = null, bestScore = 0;
+  for (const key of Object.keys(LOCAL_DISH_DB)) {
+    const nk = normalizeName(key);
+    const qWords = q.split(' ');
+    const kWords = nk.split(' ');
+    let score = 0;
+    qWords.forEach(qw => kWords.forEach(kw => { if (qw.length > 2 && (kw.includes(qw) || qw.includes(kw))) score++; }));
+    if (score > bestScore) { bestScore = score; bestKey = key; }
+  }
+  if (bestKey && bestScore > 0) return { dishName: bestKey, products: LOCAL_DISH_DB[bestKey] };
+  // 3) keyword-based fallback products
+  const keywordProducts = guessProductsFromKeywords(q);
+  if (keywordProducts.length) return { dishName: dish, products: keywordProducts };
+  return { dishName: dish, products: [{ name:'mięso lub warzywa', qty:'według uznania', cat:'inne' }, { name:'przyprawy', qty:'do smaku', cat:'inne' }] };
+}
+
+function guessProductsFromKeywords(q) {
+  const map = [
+    { k:['kurczak','drób','kura'], p:[{name:'filet z kurczaka',qty:'500 g',cat:'mięso i ryby'},{name:'czosnek',qty:'3 ząbki',cat:'warzywa i owoce'},{name:'olej',qty:'2 łyżki',cat:'przyprawy'},{name:'papryka',qty:'1 szt.',cat:'warzywa i owoce'},{name:'cebula',qty:'1 szt.',cat:'warzywa i owoce'}] },
+    { k:['wołowin','wołow','gulasz'], p:[{name:'wołowina',qty:'500 g',cat:'mięso i ryby'},{name:'cebula',qty:'2 szt.',cat:'warzywa i owoce'},{name:'marchew',qty:'2 szt.',cat:'warzywa i owoce'},{name:'bulion',qty:'500 ml',cat:'przyprawy'}] },
+    { k:['ryba','łosoś','dorsz','tuńczyk'], p:[{name:'filet rybny',qty:'400 g',cat:'mięso i ryby'},{name:'cytryna',qty:'1 szt.',cat:'warzywa i owoce'},{name:'masło',qty:'50 g',cat:'nabiał'},{name:'koper',qty:'1 pęczek',cat:'warzywa i owoce'}] },
+    { k:['makaron','spaghetti','penne','tagliatelle'], p:[{name:'makaron',qty:'400 g',cat:'pieczywo'},{name:'pomidory krojone',qty:'400 g',cat:'warzywa i owoce'},{name:'czosnek',qty:'3 ząbki',cat:'warzywa i owoce'},{name:'oliwa z oliwek',qty:'3 łyżki',cat:'przyprawy'},{name:'parmezan',qty:'50 g',cat:'nabiał'}] },
+    { k:['ryż','risotto','rizotto'], p:[{name:'ryż',qty:'300 g',cat:'pieczywo'},{name:'cebula',qty:'1 szt.',cat:'warzywa i owoce'},{name:'bulion',qty:'750 ml',cat:'przyprawy'},{name:'masło',qty:'30 g',cat:'nabiał'}] },
+    { k:['zupa','rosół','barszcz'], p:[{name:'warzywa do zupy',qty:'1 pęczek',cat:'warzywa i owoce'},{name:'bulion',qty:'1.5 l',cat:'przyprawy'},{name:'marchew',qty:'2 szt.',cat:'warzywa i owoce'},{name:'pietruszka',qty:'1 szt.',cat:'warzywa i owoce'}] },
+    { k:['sałatk','sałat'], p:[{name:'sałata',qty:'1 szt.',cat:'warzywa i owoce'},{name:'pomidor',qty:'2 szt.',cat:'warzywa i owoce'},{name:'ogórek',qty:'1 szt.',cat:'warzywa i owoce'},{name:'oliwa z oliwek',qty:'3 łyżki',cat:'przyprawy'}] },
+    { k:['pizza'], p:[{name:'mąka pszenna',qty:'500 g',cat:'pieczywo'},{name:'drożdże',qty:'7 g',cat:'pieczywo'},{name:'passata pomidorowa',qty:'400 ml',cat:'warzywa i owoce'},{name:'mozzarella',qty:'250 g',cat:'nabiał'}] },
+    { k:['jajk','omlet','jajecznic'], p:[{name:'jajka',qty:'4 szt.',cat:'nabiał'},{name:'masło',qty:'30 g',cat:'nabiał'},{name:'szczypiorek',qty:'1 pęczek',cat:'warzywa i owoce'}] },
+    { k:['naleśni'], p:[{name:'mąka pszenna',qty:'250 g',cat:'pieczywo'},{name:'mleko',qty:'500 ml',cat:'nabiał'},{name:'jajka',qty:'3 szt.',cat:'nabiał'},{name:'masło',qty:'50 g',cat:'nabiał'}] },
+    { k:['curry','tikka'], p:[{name:'filet z kurczaka',qty:'500 g',cat:'mięso i ryby'},{name:'mleczko kokosowe',qty:'400 ml',cat:'przyprawy'},{name:'pasta curry',qty:'2 łyżki',cat:'przyprawy'},{name:'ryż',qty:'300 g',cat:'pieczywo'},{name:'cebula',qty:'1 szt.',cat:'warzywa i owoce'}] },
+    { k:['tart','quiche'], p:[{name:'ciasto kruche',qty:'1 op.',cat:'pieczywo'},{name:'jajka',qty:'3 szt.',cat:'nabiał'},{name:'śmietanka',qty:'200 ml',cat:'nabiał'},{name:'ser żółty',qty:'150 g',cat:'nabiał'}] },
+    { k:['burger','hambur'], p:[{name:'mięso mielone wołowe',qty:'500 g',cat:'mięso i ryby'},{name:'bułki do burgerów',qty:'4 szt.',cat:'pieczywo'},{name:'sałata',qty:'1 główka',cat:'warzywa i owoce'},{name:'pomidor',qty:'2 szt.',cat:'warzywa i owoce'},{name:'ser cheddar',qty:'4 plastry',cat:'nabiał'}] },
+  ];
+  for (const { k, p } of map) {
+    if (k.some(kw => q.includes(kw))) return p;
+  }
+  return [];
+}
+async function networkDishToProducts(query) {
+  const enQuery = translateDishToEn(query);
+  const data = await fetchJson(`${NETWORK_MEALDB_BASE}/search.php?s=${encodeURIComponent(enQuery)}`);
+  const meal = data.meals?.[0];
+  if (!meal) return null;
+  return { dishName: meal.strMeal, products: mealToProducts(meal) };
+}
+async function fetchJson(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Błąd sieci');
+  return res.json();
+}
+const INGREDIENT_EN_TO_PL = {
+  // Mięso i ryby
+  'chicken':'kurczak','chicken breast':'filet z kurczaka','chicken thighs':'udka kurczaka',
+  'chicken legs':'nogi kurczaka','whole chicken':'kurczak cały','ground chicken':'mielone z kurczaka',
+  'beef':'wołowina','ground beef':'mięso mielone wołowe','minced beef':'mięso mielone wołowe',
+  'beef mince':'mięso mielone wołowe','steak':'stek wołowy','beef steak':'stek wołowy',
+  'pork':'wieprzowina','pork chops':'kotlet schabowy','pork belly':'boczek',
+  'bacon':'boczek','smoked bacon':'boczek wędzony','ham':'szynka','prosciutto':'szynka parmeńska',
+  'sausage':'kiełbasa','chorizo':'chorizo','salami':'salami','pepperoni':'pepperoni',
+  'lamb':'jagnięcina','lamb mince':'mielona jagnięcina','turkey':'indyk',
+  'salmon':'łosoś','tuna':'tuńczyk','cod':'dorsz','shrimp':'krewetki','prawns':'krewetki',
+  'anchovies':'sardele','sardines':'sardynki','mackerel':'makrela','trout':'pstrąg',
+  'mussels':'małże','crab':'krab','lobster':'homar',
+  // Warzywa
+  'onion':'cebula','red onion':'cebula czerwona','spring onions':'dymka','shallots':'szalotki',
+  'garlic':'czosnek','garlic cloves':'ząbki czosnku',
+  'tomato':'pomidor','tomatoes':'pomidory','cherry tomatoes':'pomidory cherry',
+  'chopped tomatoes':'pomidory krojone','tomato puree':'passata pomidorowa',
+  'tomato paste':'koncentrat pomidorowy','tomato sauce':'sos pomidorowy',
+  'potato':'ziemniaki','potatoes':'ziemniaki','sweet potato':'batat',
+  'carrot':'marchew','carrots':'marchew','celery':'seler naciowy','celeriac':'seler',
+  'leek':'por','parsley':'pietruszka','root parsley':'pietruszka korzeń',
+  'pepper':'papryka','red pepper':'papryka czerwona','yellow pepper':'papryka żółta',
+  'green pepper':'papryka zielona','bell pepper':'papryka',
+  'mushrooms':'pieczarki','mushroom':'pieczarki','chestnut mushrooms':'pieczarki kasztanowe',
+  'spinach':'szpinak','broccoli':'brokuł','cauliflower':'kalafior','cabbage':'kapusta',
+  'red cabbage':'kapusta czerwona','courgette':'cukinia','zucchini':'cukinia',
+  'aubergine':'bakłażan','eggplant':'bakłażan','cucumber':'ogórek',
+  'lettuce':'sałata','rocket':'rukola','kale':'jarmuż',
+  'peas':'groszek','green beans':'fasolka szparagowa','corn':'kukurydza',
+  'asparagus':'szparagi','artichoke':'karczoch','fennel':'fenkuł',
+  'ginger':'imbir','chilli':'chili','chili':'chili','jalapeno':'jalapeño',
+  'avocado':'awokado','lime':'limonka','lemon':'cytryna',
+  'apple':'jabłko','banana':'banan','orange':'pomarańcza','grapes':'winogrona',
+  'strawberries':'truskawki','raspberries':'maliny','blueberries':'jagody',
+  'mango':'mango','pineapple':'ananas','coconut':'kokos',
+  // Nabiał
+  'milk':'mleko','whole milk':'mleko pełnotłuste','skimmed milk':'mleko odtłuszczone',
+  'butter':'masło','cream':'śmietanka','double cream':'śmietanka 30%','sour cream':'śmietana',
+  'cream cheese':'serek śmietankowy','creme fraiche':'crème fraîche',
+  'egg':'jajka','eggs':'jajka','egg yolk':'żółtko','egg white':'białko',
+  'cheese':'ser żółty','cheddar':'cheddar','mozzarella':'mozzarella',
+  'parmesan':'parmezan','feta':'feta','brie':'brie','camembert':'camembert',
+  'ricotta':'ricotta','mascarpone':'mascarpone','gouda':'gouda',
+  'yogurt':'jogurt','greek yogurt':'jogurt grecki','natural yogurt':'jogurt naturalny',
+  // Pieczywo i produkty zbożowe
+  'flour':'mąka pszenna','plain flour':'mąka pszenna','self-raising flour':'mąka samorosnąca',
+  'bread':'chleb','white bread':'chleb biały','breadcrumbs':'bułka tarta',
+  'pasta':'makaron','spaghetti':'spaghetti','penne':'penne','tagliatelle':'tagliatelle',
+  'rice':'ryż','basmati rice':'ryż basmati','arborio rice':'ryż arborio',
+  'noodles':'makaron chiński','egg noodles':'makaron jajeczny',
+  'oats':'płatki owsiane','rolled oats':'płatki owsiane',
+  'tortilla':'tortilla','wraps':'tortilla','pita':'pita','baguette':'bagietka',
+  // Przyprawy i sosy
+  'olive oil':'oliwa z oliwek','vegetable oil':'olej roślinny','sunflower oil':'olej słonecznikowy',
+  'sesame oil':'olej sezamowy','coconut oil':'olej kokosowy',
+  'soy sauce':'sos sojowy','fish sauce':'sos rybny','worcestershire sauce':'sos worcestershire',
+  'tomato ketchup':'ketchup','mayonnaise':'majonez','mustard':'musztarda',
+  'honey':'miód','sugar':'cukier','brown sugar':'cukier brązowy',
+  'vinegar':'ocet','balsamic vinegar':'ocet balsamiczny','red wine vinegar':'ocet winny',
+  'stock':'bulion','chicken stock':'bulion drobiowy','beef stock':'bulion wołowy',
+  'vegetable stock':'bulion warzywny','coconut milk':'mleczko kokosowe',
+  'tomato juice':'sok pomidorowy','red wine':'wino czerwone','white wine':'wino białe',
+  'beer':'piwo','water':'woda',
+  'cumin':'kminek','coriander':'kolendra','paprika':'papryka mielona',
+  'cayenne pepper':'pieprz cayenne','turmeric':'kurkuma','curry powder':'curry',
+  'cinnamon':'cynamon','nutmeg':'gałka muszkatołowa','oregano':'oregano',
+  'basil':'bazylia','thyme':'tymianek','rosemary':'rozmaryn','bay leaves':'liście laurowe',
+  'mint':'mięta','dill':'koper','tarragon':'estragon',
+  // Inne
+  'lentils':'soczewica','chickpeas':'ciecierzyca','kidney beans':'fasola kidney',
+  'black beans':'czarna fasola','cannellini beans':'fasola cannellini',
+  'olives':'oliwki','capers':'kapary','sun-dried tomatoes':'suszone pomidory',
+  'pine nuts':'orzeszki piniowe','almonds':'migdały','walnuts':'orzechy włoskie',
+  'cashews':'nerkowce','peanuts':'orzeszki ziemne','sesame seeds':'sezam',
+  'raisins':'rodzynki','dried apricots':'suszone morele',
+  'tofu':'tofu','tahini':'tahini','hummus':'hummus',
+  'chocolate':'czekolada','dark chocolate':'czekolada gorzka',
+  'vanilla extract':'ekstrakt waniliowy','baking powder':'proszek do pieczenia',
+  'yeast':'drożdże','gelatin':'żelatyna',
+};
+
+function translateIngredient(enName) {
+  const key = enName.toLowerCase().trim();
+  if (INGREDIENT_EN_TO_PL[key]) return INGREDIENT_EN_TO_PL[key];
+  // partial match — longest key wins
+  let best = null, bestLen = 0;
+  for (const [en, pl] of Object.entries(INGREDIENT_EN_TO_PL)) {
+    if (key.includes(en) && en.length > bestLen) { best = pl; bestLen = en.length; }
+  }
+  return best || enName; // fallback: zostaw angielską nazwę
+}
+
+function mealToProducts(meal) {
+  const products = [];
+  for (let i = 1; i <= 20; i++) {
+    const ingredient = meal[`strIngredient${i}`];
+    const measure = meal[`strMeasure${i}`];
+    if (ingredient && ingredient.trim()) {
+      const plName = translateIngredient(ingredient.trim());
+      products.push({ name: plName, qty: (measure || '').trim(), cat: guessCategory(plName) });
+    }
+  }
+  return products;
+}
+function localProductsFallback(productsText) {
+  const tokens = parseMultipleProducts(productsText).map(normalizeName);
+  const scored = Object.entries(LOCAL_DISH_DB).map(([dish, ingredients]) => {
+    let score = 0;
+    const names = ingredients.map(i => normalizeName(i.name));
+    tokens.forEach(t => names.forEach(n => { if (n.includes(t) || t.includes(n)) score += 2; }));
+    return { name: dish, score };
+  }).filter(x => x.score > 0).sort((a,b) => b.score - a.score).slice(0, 5);
+  return scored;
+}
+async function networkProductsToDishes(productsText) {
+  const productList = parseMultipleProducts(productsText).slice(0, 4);
+  if (!productList.length) return [];
+  const scored = new Map();
+  for (const product of productList) {
+    const ingredient = normalizeIngredientQuery(product);
+    const data = await fetchJson(`${NETWORK_MEALDB_BASE}/filter.php?i=${encodeURIComponent(ingredient)}`);
+    const meals = data.meals || [];
+    meals.slice(0, 25).forEach(meal => {
+      const prev = scored.get(meal.idMeal) || { idMeal: meal.idMeal, name: meal.strMeal, score:0 };
+      prev.score += 1;
+      scored.set(meal.idMeal, prev);
+    });
+  }
+  return [...scored.values()].sort((a,b) => b.score - a.score || a.name.localeCompare(b.name)).slice(0, 8);
+}
+async function runPlanner() {
+  const value = document.getElementById('dishInput').value.trim();
+  if (!value) return;
+  const status = document.getElementById('aiStatus');
+  const btn = document.getElementById('btnPlan');
+  btn.disabled = true;
+
+  if (plannerMode === 'dish-to-products') {
+    status.innerHTML = `<div class="ai-loading"><div class="spinner"></div>Szukam przepisu...</div>`;
+    let result = null;
+    try { result = await networkDishToProducts(value); } catch(e) {}
+    const finalResult = result || localDishProductsFallback(value);
+    renderSuggestionChips(finalResult.products, `Składniki: ${finalResult.dishName}`, 'products');
+    const src = result ? '🌐 TheMealDB' : '📦 baza lokalna';
+    status.innerHTML = `<div style="font-size:12px;color:var(--accent2);margin-top:8px">✓ ${finalResult.products.length} składników (${src})</div>`;
+  } else {
+    status.innerHTML = `<div class="ai-loading"><div class="spinner"></div>Szukam pasujących dań...</div>`;
+    let proposals = [];
+    try { proposals = await networkProductsToDishes(value); } catch(e) {}
+    if (!proposals.length) proposals = localProductsFallback(value);
+    if (!proposals.length) {
+      document.getElementById('aiSuggestions').classList.remove('visible');
+      status.innerHTML = `<div style="font-size:12px;color:var(--text-dim);margin-top:8px">Brak dopasowania. Spróbuj wpisać konkretniejsze produkty, np. kurczak, ryż, papryka.</div>`;
+    } else {
+      renderSuggestionChips(proposals.slice(0,8), 'Proponowane dania', 'dishes');
+      status.innerHTML = `<div style="font-size:12px;color:var(--accent2);margin-top:8px">✓ ${Math.min(proposals.length,8)} propozycji</div>`;
+    }
+  }
+  btn.disabled = false;
+}
+function suggestFromCurrentList() {
+  const active = items.filter(i => !i.done);
+  if (!active.length) return showToast('Lista jest pusta');
+  setPlannerMode('products-to-dish');
+  document.getElementById('dishInput').value = active.map(i => i.name).join(', ');
+  if (!aiPanelOpen) toggleAIPanel();
+  runPlanner();
+}
+function shareList() {
+  const active = sortItemsByShopOrder(items.filter(i => !i.done));
+  if (!active.length) return showToast('Brak produktów do udostępnienia');
+  const text = '🛒 Lista zakupów:\n' + active.map(i => `• ${i.name}${i.amount > 1 ? ' x' + i.amount : ''}${i.qty ? ' (' + i.qty + ')' : ''}`).join('\n');
+  if (navigator.share) navigator.share({ title:'Lista zakupów', text });
+  else navigator.clipboard?.writeText(text).then(() => showToast('Skopiowano do schowka!')).catch(() => showToast('Nie udało się skopiować'));
+}
+function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); }
+
+function saveFirebaseConfig() {
+  const text = document.getElementById('firebaseConfigInput').value.trim();
+  if (!text) return showToast('Wklej konfigurację Firebase');
+  try {
+    const parsed = JSON.parse(text);
+    localStorage.setItem(STORAGE_FIREBASE_CONFIG, JSON.stringify(parsed));
+    showToast('Zapisano konfigurację Firebase');
+  } catch (e) {
+    showToast('Niepoprawny JSON konfiguracji Firebase');
+  }
+}
+function clearFirebaseConfig() {
+  localStorage.removeItem(STORAGE_FIREBASE_CONFIG);
+  document.getElementById('firebaseConfigInput').value = '';
+  showToast('Usunięto konfigurację Firebase');
+}
+function saveOCRKey() { showToast('OCR obsługiwany przez Tesseract — klucz nie jest potrzebny'); }
+function saveAnthropicKey() {
+  const key = document.getElementById('anthropicKeyInput').value.trim();
+  if (!key || !key.startsWith('sk-ant-')) return showToast('Nieprawidłowy klucz — powinien zaczynać się od sk-ant-');
+  localStorage.setItem(STORAGE_ANTHROPIC_KEY, key);
+  showToast('✓ Klucz Claude AI zapisany');
+}
+function getAnthropicKey() {
+  return localStorage.getItem(STORAGE_ANTHROPIC_KEY) || '';
+}
+function getSavedFirebaseConfig() {
+  try {
+    const saved = localStorage.getItem(STORAGE_FIREBASE_CONFIG);
+    if (saved) return JSON.parse(saved);
+    return DEFAULT_FIREBASE_CONFIG;
+  } catch {
+    return DEFAULT_FIREBASE_CONFIG;
+  }
+}
+function renderCloudStatus() {
+  const el = document.getElementById('cloudStatus');
+  if (currentUser) {
+    el.className = 'cloud-pill connected';
+    el.textContent = `☁ Sync: ${currentUser.email || 'zalogowano'}`;
+  } else if (firebaseReady) {
+    el.className = 'cloud-pill warning';
+    el.textContent = '☁ Firebase gotowy — zaloguj się';
+  } else {
+    el.className = 'cloud-pill warning';
+    el.textContent = '☁ Tryb lokalny';
+  }
+}
+function updateAuthStatus(message) {
+  document.getElementById('authStatus').innerHTML = message;
+  renderCloudStatus();
+}
+function initFirebaseFromInput() {
+  saveFirebaseConfig();
+  initFirebase();
+}
+async function ensureFirebasePersistence() {
+  if (!firebaseAuth) throw new Error('AUTH_NOT_READY');
+  if (firebasePersistenceReady) return true;
+  try {
+    await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+  } catch (error) {
+    console.warn('Firebase persistence fallback:', error);
+  }
+  firebasePersistenceReady = true;
+  return true;
+}
+async function initFirebase() {
+  const config = getSavedFirebaseConfig();
+  if (!config) {
+    updateAuthStatus('Nie połączono z Firebase.');
+    return false;
+  }
+  try {
+    updateAuthStatus('Łączę z Firebase...');
+    if (!firebase.apps.length) firebaseApp = firebase.initializeApp(config);
+    else firebaseApp = firebase.app();
+    firebaseAuth = firebase.auth();
+    firebaseDb = firebase.firestore();
+    await ensureFirebasePersistence();
+    firebaseReady = true;
+    if (!firebaseAuthListenerAttached) {
+      firebaseAuth.onAuthStateChanged(async user => {
+        currentUser = user || null;
+        if (currentUser) {
+          updateAuthStatus(`Zalogowano jako <strong>${escapeHtml(currentUser.email || 'użytkownik')}</strong>. Synchronizacja aktywna.`);
+          await startCloudSync();
+        } else {
+          if (unsubscribeList) unsubscribeList();
+          unsubscribeList = null;
+          updateAuthStatus('Firebase gotowy. Zaloguj się, aby włączyć synchronizację.');
+        }
+        render();
+      });
+      firebaseAuthListenerAttached = true;
+    }
+    updateAuthStatus('Firebase gotowy. Zaloguj się, aby włączyć synchronizację.');
+    showToast('Połączono z Firebase');
+    return true;
+  } catch (error) {
+    firebaseReady = false;
+    firebasePersistenceReady = false;
+    updateAuthStatus('Błąd inicjalizacji Firebase. Spróbuj ponownie przyciskiem „Połącz z Firebase”.');
+    showToast('Nie udało się uruchomić Firebase');
+    console.error('Firebase init error:', error);
+    return false;
+  }
+}
+function cloudDocRef() {
+  return firebaseDb.collection('users').doc(currentUser.uid).collection('lists').doc('default');
+}
+function currentPayload() {
+  return { items, categoryOrder, recipes: loadRecipes(), catMemory: loadCatMemory(), updatedAt: Date.now(), version: 1 };
+}
+async function startCloudSync() {
+  if (!firebaseReady || !currentUser) return;
+  if (unsubscribeList) unsubscribeList();
+  const ref = cloudDocRef();
+  updateAuthStatus(`Synchronizuję... (uid: ${currentUser.uid.slice(0,8)})`);
+  try {
+    const snap = await ref.get();
+    console.log('[SYNC] snap.exists:', snap.exists, 'uid:', currentUser.uid);
+    if (!snap.exists) {
+      const payload = currentPayload();
+      lastCloudPayloadHash = JSON.stringify({ items: payload.items, categoryOrder: payload.categoryOrder, catMemory: payload.catMemory || {} });
+      await ref.set(payload);
+      console.log('[SYNC] Created new doc in Firestore');
+      updateAuthStatus(`Zalogowano jako <strong>${escapeHtml(currentUser.email)}</strong>. Nowy dokument utworzony.`);
+    } else {
+      const data = snap.data();
+      console.log('[SYNC] Cloud data:', JSON.stringify(data).slice(0, 200));
+      const cloudItems = Array.isArray(data.items) ? data.items : [];
+      const cloudOrder = Array.isArray(data.categoryOrder) ? data.categoryOrder : [...DEFAULT_CAT_ORDER];
+      const cloudRecipes = Array.isArray(data.recipes) ? data.recipes : [];
+      const cloudUpdatedAt = data.updatedAt || 0;
+      const localIsEmpty = items.length === 0;
+      console.log('[SYNC] cloudItems.length:', cloudItems.length, 'localIsEmpty:', localIsEmpty, 'cloudUpdatedAt:', cloudUpdatedAt);
+      if (localIsEmpty || cloudUpdatedAt > (localStorage.getItem('zakupy_last_sync_at') || 0)) {
+        items = cloudItems;
+        categoryOrder = cloudOrder;
+        if (cloudRecipes.length) saveRecipes(cloudRecipes);
+        mergeCatMemory(data.catMemory);
+        saveLocalState();
+        render();
+        if (settingsOpen) renderSettings();
+        showToast(`✓ Pobrano ${cloudItems.length} produktów z chmury`);
+      }
+      lastCloudPayloadHash = JSON.stringify({ items: cloudItems, categoryOrder: cloudOrder, recipes: cloudRecipes, catMemory: data.catMemory || {} });
+      localStorage.setItem('zakupy_last_sync_at', cloudUpdatedAt);
+      updateAuthStatus(`Zalogowano jako <strong>${escapeHtml(currentUser.email)}</strong>. ${cloudItems.length} produktów w chmurze.`);
+    }
+  } catch(err) {
+    console.error('[SYNC] Error getting doc:', err);
+    updateAuthStatus(`<span style="color:var(--warning)">Błąd sync: ${err.code || err.message}</span>`);
+    showToast('Błąd sync: ' + (err.code || err.message));
+    return;
+  }
+  unsubscribeList = ref.onSnapshot(doc => {
+    if (!doc.exists) return;
+    const data = doc.data();
+    const nextHash = JSON.stringify({ items: data.items || [], categoryOrder: data.categoryOrder || DEFAULT_CAT_ORDER, recipes: data.recipes || [], catMemory: data.catMemory || {} });
+    if (nextHash === lastCloudPayloadHash) return;
+    items = Array.isArray(data.items) ? data.items : [];
+    categoryOrder = Array.isArray(data.categoryOrder) ? data.categoryOrder : [...DEFAULT_CAT_ORDER];
+    if (Array.isArray(data.recipes) && data.recipes.length) saveRecipes(data.recipes);
+    mergeCatMemory(data.catMemory);
+    saveLocalState();
+    render();
+    if (settingsOpen) renderSettings();
+    if (plannerMode === 'my-recipes') renderMyRecipesList();
+    lastCloudPayloadHash = nextHash;
+    localStorage.setItem('zakupy_last_sync_at', data.updatedAt || Date.now());
+    showToast(`📥 Pobrano zmiany z chmury (${items.length} prod.)`);
+  }, (err) => {
+    console.error('[SYNC] onSnapshot error:', err);
+    updateAuthStatus(`<span style="color:var(--warning)">Błąd nasłuchu: ${err.code || err.message}</span>`);
+    showToast('Błąd nasłuchu: ' + (err.code || err.message));
+  });
+}
+function scheduleCloudSave() {
+  if (!firebaseReady || !currentUser || !firebaseDb) return;
+  clearTimeout(saveCloudTimer);
+  saveCloudTimer = setTimeout(pushCloudState, 500);
+}
+async function pushCloudState() {
+  if (!firebaseReady || !currentUser || !firebaseDb) return;
+  const payload = currentPayload();
+  const newHash = JSON.stringify({ items: payload.items, categoryOrder: payload.categoryOrder, recipes: payload.recipes, catMemory: payload.catMemory || {} });
+  try {
+    await cloudDocRef().set(payload, { merge: true });
+    lastCloudPayloadHash = newHash;
+    renderCloudStatus();
+  } catch (error) {
+    console.error('Firebase push error:', error);
+    showToast('⚠️ Nie zapisano do chmury — ponawiam...');
+    setTimeout(async () => {
+      try {
+        await cloudDocRef().set(payload, { merge: true });
+        lastCloudPayloadHash = newHash;
+        showToast('✓ Zapisano do chmury');
+        renderCloudStatus();
+      } catch(e) {
+        showToast('❌ Błąd chmury: ' + (e.code || e.message || 'nieznany'));
+        console.error('Firebase retry error:', e);
+      }
+    }, 3000);
+  }
+}
+async function registerUser() {
+  if (!firebaseReady || !firebaseAuth) return showToast('Najpierw połącz aplikację z Firebase');
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  if (!email || !password) return showToast('Podaj e-mail i hasło');
+  try {
+    await ensureFirebasePersistence();
+    await firebaseAuth.createUserWithEmailAndPassword(email, password);
+    localStorage.setItem(STORAGE_USER_EMAIL, email);
+    showToast('Konto utworzone');
+  } catch (error) {
+    showToast('Nie udało się utworzyć konta');
+  }
+}
+async function loginUser() {
+  if (!firebaseReady || !firebaseAuth) return showToast('Najpierw połącz aplikację z Firebase');
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  if (!email || !password) return showToast('Podaj e-mail i hasło');
+  try {
+    await ensureFirebasePersistence();
+    await firebaseAuth.signInWithEmailAndPassword(email, password);
+    localStorage.setItem(STORAGE_USER_EMAIL, email);
+    showToast('Zalogowano');
+  } catch (error) {
+    showToast('Nie udało się zalogować');
+  }
+}
+async function logoutUser() {
+  if (!firebaseReady || !firebaseAuth) return showToast('Firebase nie jest aktywny');
+  try {
+    await firebaseAuth.signOut();
+    currentUser = null;
+    renderCloudStatus();
+    showToast('Wylogowano');
+  } catch (error) {
+    showToast('Nie udało się wylogować');
+  }
+}
+
+function triggerImageImport() {
+  document.getElementById('imageInput').click();
+}
+async function handleImageImport(event) {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
+  if (ocrBusy) return showToast('OCR już pracuje');
+  ocrBusy = true;
+  const status = document.getElementById('aiStatus');
+  if (!aiPanelOpen) toggleAIPanel();
+
+  const apiKey = getAnthropicKey();
+  if (!apiKey) {
+    ocrBusy = false;
+    toggleSettingsPanel();
+    return showToast('Najpierw wpisz klucz Claude AI w ustawieniach ⚙');
+  }
+
+  status.innerHTML = `<div class="ai-loading"><div class="spinner"></div>Claude analizuje zdjęcie...</div>`;
+  try {
+    const base64Data = await fileToBase64(file);
+    const mediaType = file.type?.startsWith('image/') ? file.type : 'image/jpeg';
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64Data } },
+            { type: 'text', text: `Przeanalizuj to zdjęcie. Może to być lista zakupów, lista składników przepisu, zrzut ekranu, kartka z notatkami lub zdjęcie produktów.
+Wyciągnij TYLKO produkty spożywcze i artykuły które trzeba kupić w sklepie.
+Zignoruj: tytuły, nagłówki, instrukcje, komentarze, URLe, ilości i jednostki miary — chcę tylko nazwy produktów po polsku.
+Odpowiedz WYŁĄCZNIE jako JSON: {"products":[{"name":"nazwa po polsku","qty":"ilość lub pusty string","cat":"kategoria"}]}
+Kategorie: warzywa i owoce, nabiał, mięso i ryby, pieczywo, mrożonki, napoje, przyprawy, chemia i kosmetyki, inne` }
+          ]
+        }]
+      })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    const raw = data.content?.map(c => c.text || '').join('').trim() || '';
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Brak danych w odpowiedzi');
+    const parsed = JSON.parse(jsonMatch[0]);
+    const products = (parsed.products || []).map(p => ({
+      name: p.name,
+      qty: p.qty || '',
+      cat: CATS[p.cat] ? p.cat : guessCategory(p.name)
+    }));
+    if (!products.length) throw new Error('Nie znaleziono produktów na zdjęciu');
+    // Dodaj wszystkie od razu na listę
+    products.forEach(p => addSingleItem(p.name, p.cat, p.qty));
+    status.innerHTML = `<div style="font-size:12px;color:var(--accent2);margin-top:8px">✓ Claude odczytał ${products.length} produktów ze zdjęcia</div>`;
+    showToast(`Dodano ${products.length} produktów ze zdjęcia`);
+  } catch (error) {
+    status.innerHTML = `<div style="font-size:12px;color:var(--warning);margin-top:8px">Błąd: ${escapeHtml(error.message)}</div>`;
+    showToast('Nie udało się odczytać zdjęcia');
+  } finally {
+    ocrBusy = false;
+  }
+}
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+function toggleSettingsPanelIfClosed() {
+  if (!settingsOpen) toggleSettingsPanel();
+}
+
+(function boot() {
+  const savedConfig = localStorage.getItem(STORAGE_FIREBASE_CONFIG);
+  if (savedConfig) {
+    document.getElementById('firebaseConfigInput').value = JSON.stringify(JSON.parse(savedConfig), null, 2);
+  } else if (DEFAULT_FIREBASE_CONFIG?.projectId) {
+    document.getElementById('firebaseConfigInput').value = JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2);
+    localStorage.setItem(STORAGE_FIREBASE_CONFIG, JSON.stringify(DEFAULT_FIREBASE_CONFIG));
+  }
+  const savedEmail = localStorage.getItem(STORAGE_USER_EMAIL) || '';
+  if (savedEmail) document.getElementById('authEmail').value = savedEmail;
+  const savedAntKey = localStorage.getItem(STORAGE_ANTHROPIC_KEY) || '';
+  if (savedAntKey) document.getElementById('anthropicKeyInput').value = savedAntKey;
+  render();
+  renderSettings();
+  renderCloudStatus();
+  loadCatMemory(); // inicjalizuj cache kategorii
+  if (!getSpeechRecognition()) document.getElementById('voiceHint').innerHTML = 'Dyktowanie działa w przeglądarkach obsługujących Web Speech API. Wpisywanie po przecinkach i import zdjęcia działają niezależnie od tego.';
+  initFirebase();
+  autoCleanDone(); // sprawdź od razu przy starcie
+  setInterval(autoCleanDone, 60 * 1000); // i co minutę
+})();
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.getElementById('mainInput').blur();
+    if (isRecording && recognition) recognition.stop();
+  }
+});
+
+// Rejestracja Service Workera (PWA) z wymuszeniem aktualizacji
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js');
+      // Wymuszaj sprawdzenie aktualizacji przy każdym otwarciu
+      reg.update().catch(() => {});
+      // Natychmiast aktywuj nowy SW bez czekania
+      reg.addEventListener('updatefound', () => {
+        const newSW = reg.installing;
+        if (newSW) {
+          newSW.addEventListener('statechange', () => {
+            if (newSW.state === 'activated') {
+              window.location.reload();
+            }
+          });
+        }
+      });
+    } catch(e) {}
+  });
+}
+</script>
+</body>
+</html>
