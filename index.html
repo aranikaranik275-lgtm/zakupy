@@ -931,6 +931,7 @@ function addItem(name, cat, qty) {
   const input = document.getElementById('mainInput');
   const raw = typeof name === 'string' ? name : input.value.trim();
   if (!raw) return;
+  transcriptBuffer = ''; // wyczyść bufor dyktowania
   if (!cat && !qty) {
     const parts = parseMultipleProducts(raw);
     if (parts.length > 1) {
@@ -981,24 +982,24 @@ function toggleVoiceInput() {
   recognition.onstart = () => {
     isRecording = true;
     document.getElementById('btnMic').classList.add('recording');
-    showToast('Słucham… mów produkty jeden po drugim');
+    showToast('Słucham… dyktuj produkty, potem kliknij +');
   };
   recognition.onresult = (event) => {
     let interim = '';
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const text = event.results[i][0].transcript.trim();
       if (event.results[i].isFinal) {
-        // Każde finalne zdanie → od razu dodaj jako osobny produkt / lista
+        // Dopisuj do bufora — nie dodawaj od razu, czekaj na +
         if (text) {
-          addManyItems(text);
-          transcriptBuffer = ''; // wyczyść bufor po dodaniu
+          transcriptBuffer += (transcriptBuffer ? ', ' : '') + text;
         }
       } else {
         interim = text;
       }
     }
-    // Pokaż tylko tymczasowy tekst w polu
-    document.getElementById('mainInput').value = interim;
+    // Pokaż bufor + tymczasowy tekst w polu
+    const display = transcriptBuffer + (interim ? (transcriptBuffer ? ', ' : '') + interim : '');
+    document.getElementById('mainInput').value = display;
   };
   recognition.onerror = event => {
     const map = {
@@ -1012,7 +1013,10 @@ function toggleVoiceInput() {
   recognition.onend = () => {
     isRecording = false;
     document.getElementById('btnMic').classList.remove('recording');
-    document.getElementById('mainInput').value = '';
+    // Zostaw bufor w polu — użytkownik kliknie + żeby dodać
+    if (transcriptBuffer) {
+      document.getElementById('mainInput').value = transcriptBuffer;
+    }
   };
   recognition.start();
 }
