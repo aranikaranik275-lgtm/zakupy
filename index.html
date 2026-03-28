@@ -982,25 +982,28 @@ function toggleVoiceInput() {
     isRecording = true;
     document.getElementById('btnMic').classList.add('recording');
   };
+  // sessionResult przechowuje ostatni wynik TYLKO z bieżącej sesji nagrywania
+  let sessionResult = '';
+
   recognition.onresult = (event) => {
     const input = document.getElementById('mainInput');
-    let finalText = '';
+    let latestFinal = '';
     let interim = '';
+    // Bierz tylko OSTATNI finalny wynik — Chrome może wysłać kilka (np. "worki" → "worki na śmieci")
     for (let i = 0; i < event.results.length; i++) {
       if (event.results[i].isFinal) {
-        finalText = event.results[i][0].transcript.trim();
+        latestFinal = event.results[i][0].transcript.trim();
       } else {
         interim = event.results[i][0].transcript.trim();
       }
     }
-    if (finalText) {
-      // Dopisz do istniejącego tekstu w polu
-      const current = input.value.trim();
-      input.value = current ? current + ', ' + finalText : finalText;
+    if (latestFinal) {
+      // Zastąp (nie dopisuj!) wynik z tej sesji
+      sessionResult = latestFinal;
+      input.value = transcriptBuffer ? transcriptBuffer + ', ' + sessionResult : sessionResult;
     } else if (interim) {
-      // Pokaż tymczasowy podgląd
-      const current = transcriptBuffer;
-      input.value = current ? current + ', ' + interim : interim;
+      // Podgląd tymczasowy
+      input.value = transcriptBuffer ? transcriptBuffer + ', ' + interim : interim;
     }
   };
   recognition.onerror = event => {
@@ -1015,8 +1018,11 @@ function toggleVoiceInput() {
   recognition.onend = () => {
     isRecording = false;
     document.getElementById('btnMic').classList.remove('recording');
-    // Zapamiętaj aktualny tekst jako bazę do kolejnego dyktowania
-    transcriptBuffer = document.getElementById('mainInput').value.trim();
+    // Dopisz wynik sesji do bufora
+    if (sessionResult) {
+      transcriptBuffer = transcriptBuffer ? transcriptBuffer + ', ' + sessionResult : sessionResult;
+    }
+    document.getElementById('mainInput').value = transcriptBuffer;
   };
   transcriptBuffer = document.getElementById('mainInput').value.trim();
   showToast('Słucham… powiedz produkt, potem 🎤 dla kolejnego');
