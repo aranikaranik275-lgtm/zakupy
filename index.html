@@ -973,33 +973,35 @@ function toggleVoiceInput() {
   if (isRecording && recognition) return recognition.stop();
   const SpeechRecognition = getSpeechRecognition();
   if (!SpeechRecognition) return showToast('Twoja przeglądarka nie obsługuje dyktowania');
-  transcriptBuffer = '';
   recognition = new SpeechRecognition();
   recognition.lang = 'pl-PL';
-  recognition.continuous = true;
+  recognition.continuous = false;
   recognition.interimResults = true;
   recognition.maxAlternatives = 1;
   recognition.onstart = () => {
     isRecording = true;
     document.getElementById('btnMic').classList.add('recording');
-    showToast('Słucham… dyktuj produkty, potem kliknij +');
   };
   recognition.onresult = (event) => {
+    const input = document.getElementById('mainInput');
+    let finalText = '';
     let interim = '';
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const text = event.results[i][0].transcript.trim();
+    for (let i = 0; i < event.results.length; i++) {
       if (event.results[i].isFinal) {
-        // Dopisuj do bufora — nie dodawaj od razu, czekaj na +
-        if (text) {
-          transcriptBuffer += (transcriptBuffer ? ', ' : '') + text;
-        }
+        finalText = event.results[i][0].transcript.trim();
       } else {
-        interim = text;
+        interim = event.results[i][0].transcript.trim();
       }
     }
-    // Pokaż bufor + tymczasowy tekst w polu
-    const display = transcriptBuffer + (interim ? (transcriptBuffer ? ', ' : '') + interim : '');
-    document.getElementById('mainInput').value = display;
+    if (finalText) {
+      // Dopisz do istniejącego tekstu w polu
+      const current = input.value.trim();
+      input.value = current ? current + ', ' + finalText : finalText;
+    } else if (interim) {
+      // Pokaż tymczasowy podgląd
+      const current = transcriptBuffer;
+      input.value = current ? current + ', ' + interim : interim;
+    }
   };
   recognition.onerror = event => {
     const map = {
@@ -1008,16 +1010,16 @@ function toggleVoiceInput() {
       'no-speech': 'Nie wykryto mowy',
       'audio-capture': 'Nie wykryto mikrofonu'
     };
-    showToast(map[event.error] || ('Błąd dyktowania: ' + event.error));
+    if (event.error !== 'no-speech') showToast(map[event.error] || ('Błąd: ' + event.error));
   };
   recognition.onend = () => {
     isRecording = false;
     document.getElementById('btnMic').classList.remove('recording');
-    // Zostaw bufor w polu — użytkownik kliknie + żeby dodać
-    if (transcriptBuffer) {
-      document.getElementById('mainInput').value = transcriptBuffer;
-    }
+    // Zapamiętaj aktualny tekst jako bazę do kolejnego dyktowania
+    transcriptBuffer = document.getElementById('mainInput').value.trim();
   };
+  transcriptBuffer = document.getElementById('mainInput').value.trim();
+  showToast('Słucham… powiedz produkt, potem 🎤 dla kolejnego');
   recognition.start();
 }
 
