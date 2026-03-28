@@ -329,6 +329,7 @@ const CATS = {
   'pieczywo':        { color:'#c47a35', emoji:'🍞' },
   'mrożonki':        { color:'#5a8aa0', emoji:'🧊' },
   'napoje':          { color:'#7a6aaa', emoji:'🥤' },
+  'przyprawy':        { color:'#c4873b', emoji:'🧂' },
   'chemia i kosmetyki': { color:'#a07050', emoji:'🧴' },
   'inne':            { color:'#8a8070', emoji:'📦' },
 };
@@ -377,7 +378,8 @@ let firebaseAuthListenerAttached = false;
 
 const CAT_KEYWORDS = {
   'warzywa i owoce': [
-    'pomidor','ogórek','sałat','marchew','ziemniak','cebul','czosnek','papryka','brokuł',
+    'pomidor','ogórek','sałat','marchew','ziemniak','cebul','czosnek','papryka',
+    'papryka czerwon','papryka zielon','papryka żółt','papryka śwież','brokuł',
     'jabłko','jabłk','banan','cytryn','pomarańcz','gruszk','śliwk','truskawk','malin',
     'winogrona','mandarynk','awokado','szpinak','kapusta','burak','bazylia','natka',
     'koper','pietruszk','por ','grzyb','kalafior','seler','rzodkiewk','dynia','cukini',
@@ -421,6 +423,16 @@ const CAT_KEYWORDS = {
     'napój energetyczny','sok pomarańczowy','sok jabłkowy','sok pomidorowy',
     'sprite','pepsi','fanta','redbull','monster','isoton','gazowany','niegazowany',
     'tonik','kombucha','kefir wodny','napar','syrop','koncentrat',
+  ],
+  'przyprawy': [
+    'przypraw','pieprz','sól','oregano','bazylia susz','tymianek','rozmaryn','kurkuma',
+    'papryka słodk','papryka ostr','papryka wędzon','papryka mielon','papryka w proszku',
+    'cynamon','imbir mielon','gałka muszkat','curry','chili mielon',
+    'zioła prowansalsk','kminek','kmin','majeranek','lubczyk','liść laurow','ziele angielski',
+    'gorczyc','musztard','ketchup','sos sojow','ocet','olej','oliwa','przyprawa','vegeta',
+    'aromat','bulion','kostka rosołow','maggi','tabasco','sriracha','wasabi','harissa',
+    'garam masala','szafran','kardamon','kolendra mielon','anyż','wanilia','ekstrakt',
+    'sezam','mak','nasion','siemię','czarnuszk',
   ],
   'chemia i kosmetyki': [
     'szampon','żel','mydło','pasta do zębów','proszek','płyn do','środek','chemia',
@@ -474,13 +486,19 @@ function guessCategory(name) {
   for (const [learned, cat] of Object.entries(mem)) {
     if (learned.length >= 4 && n.includes(learned)) return cat;
   }
-  // 3) Wbudowany słownik
+  // 3) Wbudowany słownik — najdłuższe dopasowanie wygrywa
+  //    (dzięki temu "papryka słodka" → przyprawy, a "papryka" → warzywa)
+  let bestCat = null, bestLen = 0;
   for (const [cat, keywords] of Object.entries(CAT_KEYWORDS)) {
     for (const kw of keywords) {
-      if (n.includes(normalizeName(kw))) return cat;
+      const nkw = normalizeName(kw);
+      if (nkw.length > bestLen && n.includes(nkw)) {
+        bestLen = nkw.length;
+        bestCat = cat;
+      }
     }
   }
-  return 'inne';
+  return bestCat || 'inne';
 }
 
 const LOCAL_DISH_DB = {
@@ -491,7 +509,7 @@ const LOCAL_DISH_DB = {
     { name:'cebula', qty:'1 szt.', cat:'warzywa i owoce' },
     { name:'czosnek', qty:'2 ząbki', cat:'warzywa i owoce' },
     { name:'parmezan', qty:'50 g', cat:'nabiał' },
-    { name:'oliwa z oliwek', qty:'2 łyżki', cat:'inne' }
+    { name:'oliwa z oliwek', qty:'2 łyżki', cat:'przyprawy' }
   ],
   'naleśniki': [
     { name:'mąka pszenna', qty:'250 g', cat:'pieczywo' },
@@ -520,7 +538,7 @@ const LOCAL_DISH_DB = {
     { name:'śmietana', qty:'200 ml', cat:'nabiał' },
     { name:'cebula', qty:'1 szt.', cat:'warzywa i owoce' },
     { name:'czosnek', qty:'2 ząbki', cat:'warzywa i owoce' },
-    { name:'bulion warzywny', qty:'1 l', cat:'inne' }
+    { name:'bulion warzywny', qty:'1 l', cat:'przyprawy' }
   ],
   'rosół': [
     { name:'kurczak', qty:'1 kg', cat:'mięso i ryby' },
@@ -538,7 +556,7 @@ const LOCAL_DISH_DB = {
     { name:'mąka pszenna', qty:'50 g', cat:'pieczywo' },
     { name:'ziemniaki', qty:'1 kg', cat:'warzywa i owoce' },
     { name:'kapusta kiszona', qty:'400 g', cat:'warzywa i owoce' },
-    { name:'olej', qty:'100 ml', cat:'inne' }
+    { name:'olej', qty:'100 ml', cat:'przyprawy' }
   ],
   'pierogi': [
     { name:'mąka pszenna', qty:'500 g', cat:'pieczywo' },
@@ -556,7 +574,7 @@ const LOCAL_DISH_DB = {
     { name:'czosnek', qty:'3 ząbki', cat:'warzywa i owoce' },
     { name:'śmietana', qty:'200 ml', cat:'nabiał' },
     { name:'ziemniaki', qty:'500 g', cat:'warzywa i owoce' },
-    { name:'majeranek', qty:'1 łyżka', cat:'inne' }
+    { name:'majeranek', qty:'1 łyżka', cat:'przyprawy' }
   ],
   'pizza': [
     { name:'mąka pszenna', qty:'500 g', cat:'pieczywo' },
@@ -565,17 +583,17 @@ const LOCAL_DISH_DB = {
     { name:'mozzarella', qty:'250 g', cat:'nabiał' },
     { name:'szynka', qty:'150 g', cat:'mięso i ryby' },
     { name:'papryka', qty:'1 szt.', cat:'warzywa i owoce' },
-    { name:'oliwa z oliwek', qty:'3 łyżki', cat:'inne' }
+    { name:'oliwa z oliwek', qty:'3 łyżki', cat:'przyprawy' }
   ],
   'kurczak curry': [
     { name:'filet z kurczaka', qty:'600 g', cat:'mięso i ryby' },
     { name:'mleczko kokosowe', qty:'400 ml', cat:'inne' },
-    { name:'pasta curry', qty:'2 łyżki', cat:'inne' },
+    { name:'pasta curry', qty:'2 łyżki', cat:'przyprawy' },
     { name:'cebula', qty:'1 szt.', cat:'warzywa i owoce' },
     { name:'czosnek', qty:'3 ząbki', cat:'warzywa i owoce' },
     { name:'imbir', qty:'1 kawałek', cat:'warzywa i owoce' },
     { name:'ryż', qty:'300 g', cat:'pieczywo' },
-    { name:'olej', qty:'2 łyżki', cat:'inne' }
+    { name:'olej', qty:'2 łyżki', cat:'przyprawy' }
   ],
   'sałatka grecka': [
     { name:'pomidory', qty:'3 szt.', cat:'warzywa i owoce' },
@@ -584,7 +602,7 @@ const LOCAL_DISH_DB = {
     { name:'ser feta', qty:'200 g', cat:'nabiał' },
     { name:'oliwki czarne', qty:'100 g', cat:'warzywa i owoce' },
     { name:'cebula czerwona', qty:'1 szt.', cat:'warzywa i owoce' },
-    { name:'oliwa z oliwek', qty:'4 łyżki', cat:'inne' }
+    { name:'oliwa z oliwek', qty:'4 łyżki', cat:'przyprawy' }
   ],
   'ryż z warzywami': [
     { name:'ryż', qty:'300 g', cat:'pieczywo' },
@@ -593,7 +611,7 @@ const LOCAL_DISH_DB = {
     { name:'cebula', qty:'1 szt.', cat:'warzywa i owoce' },
     { name:'groszek', qty:'200 g', cat:'warzywa i owoce' },
     { name:'jajka', qty:'2 szt.', cat:'nabiał' },
-    { name:'sos sojowy', qty:'3 łyżki', cat:'inne' }
+    { name:'sos sojowy', qty:'3 łyżki', cat:'przyprawy' }
   ],
   'tost francuski': [
     { name:'chleb tostowy', qty:'1 op.', cat:'pieczywo' },
@@ -601,7 +619,7 @@ const LOCAL_DISH_DB = {
     { name:'mleko', qty:'100 ml', cat:'nabiał' },
     { name:'masło', qty:'50 g', cat:'nabiał' },
     { name:'cukier puder', qty:'2 łyżki', cat:'inne' },
-    { name:'cynamon', qty:'1 łyżeczka', cat:'inne' }
+    { name:'cynamon', qty:'1 łyżeczka', cat:'przyprawy' }
   ],
   'owsianka': [
     { name:'płatki owsiane', qty:'100 g', cat:'pieczywo' },
@@ -616,9 +634,9 @@ const LOCAL_DISH_DB = {
     { name:'marchew', qty:'2 szt.', cat:'warzywa i owoce' },
     { name:'papryka', qty:'2 szt.', cat:'warzywa i owoce' },
     { name:'pomidory krojone', qty:'400 g', cat:'warzywa i owoce' },
-    { name:'bulion wołowy', qty:'500 ml', cat:'inne' },
+    { name:'bulion wołowy', qty:'500 ml', cat:'przyprawy' },
     { name:'ziemniaki', qty:'800 g', cat:'warzywa i owoce' },
-    { name:'olej', qty:'3 łyżki', cat:'inne' }
+    { name:'olej', qty:'3 łyżki', cat:'przyprawy' }
   ],
   'pasta carbonara': [
     { name:'makaron spaghetti', qty:'400 g', cat:'pieczywo' },
@@ -635,7 +653,7 @@ const LOCAL_DISH_DB = {
     { name:'seler', qty:'1/4', cat:'warzywa i owoce' },
     { name:'pietruszka', qty:'1 szt.', cat:'warzywa i owoce' },
     { name:'fasolka szparagowa', qty:'200 g', cat:'warzywa i owoce' },
-    { name:'bulion warzywny', qty:'1.5 l', cat:'inne' }
+    { name:'bulion warzywny', qty:'1.5 l', cat:'przyprawy' }
   ],
   'wrap z kurczakiem': [
     { name:'tortilla', qty:'4 szt.', cat:'pieczywo' },
@@ -1056,7 +1074,7 @@ async function runRecipeParser() {
 Odpowiedz WYŁĄCZNIE jako JSON w formacie:
 {"products":[{"name":"nazwa produktu po polsku","qty":"ilość z jednostką lub pusty string","cat":"jedna z kategorii"}]}
 
-Dostępne kategorie: warzywa i owoce, nabiał, mięso i ryby, pieczywo, mrożonki, napoje, chemia i kosmetyki, inne
+Dostępne kategorie: warzywa i owoce, nabiał, mięso i ryby, pieczywo, mrożonki, napoje, przyprawy, chemia i kosmetyki, inne
 
 Tekst do analizy:
 ${text}`
@@ -1393,17 +1411,17 @@ function localDishProductsFallback(dish) {
 
 function guessProductsFromKeywords(q) {
   const map = [
-    { k:['kurczak','drób','kura'], p:[{name:'filet z kurczaka',qty:'500 g',cat:'mięso i ryby'},{name:'czosnek',qty:'3 ząbki',cat:'warzywa i owoce'},{name:'olej',qty:'2 łyżki',cat:'inne'},{name:'papryka',qty:'1 szt.',cat:'warzywa i owoce'},{name:'cebula',qty:'1 szt.',cat:'warzywa i owoce'}] },
-    { k:['wołowin','wołow','gulasz'], p:[{name:'wołowina',qty:'500 g',cat:'mięso i ryby'},{name:'cebula',qty:'2 szt.',cat:'warzywa i owoce'},{name:'marchew',qty:'2 szt.',cat:'warzywa i owoce'},{name:'bulion',qty:'500 ml',cat:'inne'}] },
+    { k:['kurczak','drób','kura'], p:[{name:'filet z kurczaka',qty:'500 g',cat:'mięso i ryby'},{name:'czosnek',qty:'3 ząbki',cat:'warzywa i owoce'},{name:'olej',qty:'2 łyżki',cat:'przyprawy'},{name:'papryka',qty:'1 szt.',cat:'warzywa i owoce'},{name:'cebula',qty:'1 szt.',cat:'warzywa i owoce'}] },
+    { k:['wołowin','wołow','gulasz'], p:[{name:'wołowina',qty:'500 g',cat:'mięso i ryby'},{name:'cebula',qty:'2 szt.',cat:'warzywa i owoce'},{name:'marchew',qty:'2 szt.',cat:'warzywa i owoce'},{name:'bulion',qty:'500 ml',cat:'przyprawy'}] },
     { k:['ryba','łosoś','dorsz','tuńczyk'], p:[{name:'filet rybny',qty:'400 g',cat:'mięso i ryby'},{name:'cytryna',qty:'1 szt.',cat:'warzywa i owoce'},{name:'masło',qty:'50 g',cat:'nabiał'},{name:'koper',qty:'1 pęczek',cat:'warzywa i owoce'}] },
-    { k:['makaron','spaghetti','penne','tagliatelle'], p:[{name:'makaron',qty:'400 g',cat:'pieczywo'},{name:'pomidory krojone',qty:'400 g',cat:'warzywa i owoce'},{name:'czosnek',qty:'3 ząbki',cat:'warzywa i owoce'},{name:'oliwa z oliwek',qty:'3 łyżki',cat:'inne'},{name:'parmezan',qty:'50 g',cat:'nabiał'}] },
-    { k:['ryż','risotto','rizotto'], p:[{name:'ryż',qty:'300 g',cat:'pieczywo'},{name:'cebula',qty:'1 szt.',cat:'warzywa i owoce'},{name:'bulion',qty:'750 ml',cat:'inne'},{name:'masło',qty:'30 g',cat:'nabiał'}] },
-    { k:['zupa','rosół','barszcz'], p:[{name:'warzywa do zupy',qty:'1 pęczek',cat:'warzywa i owoce'},{name:'bulion',qty:'1.5 l',cat:'inne'},{name:'marchew',qty:'2 szt.',cat:'warzywa i owoce'},{name:'pietruszka',qty:'1 szt.',cat:'warzywa i owoce'}] },
-    { k:['sałatk','sałat'], p:[{name:'sałata',qty:'1 szt.',cat:'warzywa i owoce'},{name:'pomidor',qty:'2 szt.',cat:'warzywa i owoce'},{name:'ogórek',qty:'1 szt.',cat:'warzywa i owoce'},{name:'oliwa z oliwek',qty:'3 łyżki',cat:'inne'}] },
+    { k:['makaron','spaghetti','penne','tagliatelle'], p:[{name:'makaron',qty:'400 g',cat:'pieczywo'},{name:'pomidory krojone',qty:'400 g',cat:'warzywa i owoce'},{name:'czosnek',qty:'3 ząbki',cat:'warzywa i owoce'},{name:'oliwa z oliwek',qty:'3 łyżki',cat:'przyprawy'},{name:'parmezan',qty:'50 g',cat:'nabiał'}] },
+    { k:['ryż','risotto','rizotto'], p:[{name:'ryż',qty:'300 g',cat:'pieczywo'},{name:'cebula',qty:'1 szt.',cat:'warzywa i owoce'},{name:'bulion',qty:'750 ml',cat:'przyprawy'},{name:'masło',qty:'30 g',cat:'nabiał'}] },
+    { k:['zupa','rosół','barszcz'], p:[{name:'warzywa do zupy',qty:'1 pęczek',cat:'warzywa i owoce'},{name:'bulion',qty:'1.5 l',cat:'przyprawy'},{name:'marchew',qty:'2 szt.',cat:'warzywa i owoce'},{name:'pietruszka',qty:'1 szt.',cat:'warzywa i owoce'}] },
+    { k:['sałatk','sałat'], p:[{name:'sałata',qty:'1 szt.',cat:'warzywa i owoce'},{name:'pomidor',qty:'2 szt.',cat:'warzywa i owoce'},{name:'ogórek',qty:'1 szt.',cat:'warzywa i owoce'},{name:'oliwa z oliwek',qty:'3 łyżki',cat:'przyprawy'}] },
     { k:['pizza'], p:[{name:'mąka pszenna',qty:'500 g',cat:'pieczywo'},{name:'drożdże',qty:'7 g',cat:'pieczywo'},{name:'passata pomidorowa',qty:'400 ml',cat:'warzywa i owoce'},{name:'mozzarella',qty:'250 g',cat:'nabiał'}] },
     { k:['jajk','omlet','jajecznic'], p:[{name:'jajka',qty:'4 szt.',cat:'nabiał'},{name:'masło',qty:'30 g',cat:'nabiał'},{name:'szczypiorek',qty:'1 pęczek',cat:'warzywa i owoce'}] },
     { k:['naleśni'], p:[{name:'mąka pszenna',qty:'250 g',cat:'pieczywo'},{name:'mleko',qty:'500 ml',cat:'nabiał'},{name:'jajka',qty:'3 szt.',cat:'nabiał'},{name:'masło',qty:'50 g',cat:'nabiał'}] },
-    { k:['curry','tikka'], p:[{name:'filet z kurczaka',qty:'500 g',cat:'mięso i ryby'},{name:'mleczko kokosowe',qty:'400 ml',cat:'inne'},{name:'pasta curry',qty:'2 łyżki',cat:'inne'},{name:'ryż',qty:'300 g',cat:'pieczywo'},{name:'cebula',qty:'1 szt.',cat:'warzywa i owoce'}] },
+    { k:['curry','tikka'], p:[{name:'filet z kurczaka',qty:'500 g',cat:'mięso i ryby'},{name:'mleczko kokosowe',qty:'400 ml',cat:'przyprawy'},{name:'pasta curry',qty:'2 łyżki',cat:'przyprawy'},{name:'ryż',qty:'300 g',cat:'pieczywo'},{name:'cebula',qty:'1 szt.',cat:'warzywa i owoce'}] },
     { k:['tart','quiche'], p:[{name:'ciasto kruche',qty:'1 op.',cat:'pieczywo'},{name:'jajka',qty:'3 szt.',cat:'nabiał'},{name:'śmietanka',qty:'200 ml',cat:'nabiał'},{name:'ser żółty',qty:'150 g',cat:'nabiał'}] },
     { k:['burger','hambur'], p:[{name:'mięso mielone wołowe',qty:'500 g',cat:'mięso i ryby'},{name:'bułki do burgerów',qty:'4 szt.',cat:'pieczywo'},{name:'sałata',qty:'1 główka',cat:'warzywa i owoce'},{name:'pomidor',qty:'2 szt.',cat:'warzywa i owoce'},{name:'ser cheddar',qty:'4 plastry',cat:'nabiał'}] },
   ];
@@ -1892,7 +1910,7 @@ async function handleImageImport(event) {
 Wyciągnij TYLKO produkty spożywcze i artykuły które trzeba kupić w sklepie.
 Zignoruj: tytuły, nagłówki, instrukcje, komentarze, URLe, ilości i jednostki miary — chcę tylko nazwy produktów po polsku.
 Odpowiedz WYŁĄCZNIE jako JSON: {"products":[{"name":"nazwa po polsku","qty":"ilość lub pusty string","cat":"kategoria"}]}
-Kategorie: warzywa i owoce, nabiał, mięso i ryby, pieczywo, mrożonki, napoje, chemia i kosmetyki, inne` }
+Kategorie: warzywa i owoce, nabiał, mięso i ryby, pieczywo, mrożonki, napoje, przyprawy, chemia i kosmetyki, inne` }
           ]
         }]
       })
