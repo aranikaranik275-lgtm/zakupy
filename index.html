@@ -4,7 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0f1a0f">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Zakupy">
+<meta name="theme-color" content="#faf7f2">
+<meta name="description" content="Lista zakupów z synchronizacją i asystentem AI">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Zakupy Sync</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -441,6 +446,12 @@ function saveCatMemory(mem) {
   catMemoryCache = mem;
   localStorage.setItem(STORAGE_CAT_MEMORY, JSON.stringify(mem));
 }
+function mergeCatMemory(cloudMem) {
+  if (!cloudMem || typeof cloudMem !== 'object') return;
+  const local = loadCatMemory();
+  const merged = { ...cloudMem, ...local }; // lokalne mają priorytet
+  if (JSON.stringify(merged) !== JSON.stringify(local)) saveCatMemory(merged);
+}
 function learnCategory(name, cat) {
   const mem = loadCatMemory();
   const key = normalizeName(name);
@@ -750,13 +761,6 @@ function cleanIngredientLine(line) {
   // Usuń polecenia słowne
   s = s.replace(/^(dodaj|kup|potrzebuje|potrzebuję|wez|weź|prosze|proszę)\s+/i, '');
   return s.trim() || null;
-}
-function guessCategory(name) {
-  const lower = normalizeName(name);
-  for (const [cat, keywords] of Object.entries(CAT_KEYWORDS)) {
-    if (keywords.some(k => lower.includes(normalizeName(k)))) return cat;
-  }
-  return 'inne';
 }
 function renderSettings() {
   const wrap = document.getElementById('settingsList');
@@ -1722,7 +1726,7 @@ async function startCloudSync() {
     console.log('[SYNC] snap.exists:', snap.exists, 'uid:', currentUser.uid);
     if (!snap.exists) {
       const payload = currentPayload();
-      lastCloudPayloadHash = JSON.stringify({ items: payload.items, categoryOrder: payload.categoryOrder });
+      lastCloudPayloadHash = JSON.stringify({ items: payload.items, categoryOrder: payload.categoryOrder, catMemory: payload.catMemory || {} });
       await ref.set(payload);
       console.log('[SYNC] Created new doc in Firestore');
       updateAuthStatus(`Zalogowano jako <strong>${escapeHtml(currentUser.email)}</strong>. Nowy dokument utworzony.`);
@@ -1739,13 +1743,13 @@ async function startCloudSync() {
         items = cloudItems;
         categoryOrder = cloudOrder;
         if (cloudRecipes.length) saveRecipes(cloudRecipes);
-        if (data.catMemory && typeof data.catMemory === 'object') saveCatMemory(data.catMemory);
+        mergeCatMemory(data.catMemory);
         saveLocalState();
         render();
         if (settingsOpen) renderSettings();
         showToast(`✓ Pobrano ${cloudItems.length} produktów z chmury`);
       }
-      lastCloudPayloadHash = JSON.stringify({ items: cloudItems, categoryOrder: cloudOrder, recipes: cloudRecipes });
+      lastCloudPayloadHash = JSON.stringify({ items: cloudItems, categoryOrder: cloudOrder, recipes: cloudRecipes, catMemory: data.catMemory || {} });
       localStorage.setItem('zakupy_last_sync_at', cloudUpdatedAt);
       updateAuthStatus(`Zalogowano jako <strong>${escapeHtml(currentUser.email)}</strong>. ${cloudItems.length} produktów w chmurze.`);
     }
@@ -1758,12 +1762,12 @@ async function startCloudSync() {
   unsubscribeList = ref.onSnapshot(doc => {
     if (!doc.exists) return;
     const data = doc.data();
-    const nextHash = JSON.stringify({ items: data.items || [], categoryOrder: data.categoryOrder || DEFAULT_CAT_ORDER, recipes: data.recipes || [] });
+    const nextHash = JSON.stringify({ items: data.items || [], categoryOrder: data.categoryOrder || DEFAULT_CAT_ORDER, recipes: data.recipes || [], catMemory: data.catMemory || {} });
     if (nextHash === lastCloudPayloadHash) return;
     items = Array.isArray(data.items) ? data.items : [];
     categoryOrder = Array.isArray(data.categoryOrder) ? data.categoryOrder : [...DEFAULT_CAT_ORDER];
     if (Array.isArray(data.recipes) && data.recipes.length) saveRecipes(data.recipes);
-    if (data.catMemory && typeof data.catMemory === 'object') saveCatMemory(data.catMemory);
+    mergeCatMemory(data.catMemory);
     saveLocalState();
     render();
     if (settingsOpen) renderSettings();
@@ -1785,7 +1789,7 @@ function scheduleCloudSave() {
 async function pushCloudState() {
   if (!firebaseReady || !currentUser || !firebaseDb) return;
   const payload = currentPayload();
-  const newHash = JSON.stringify({ items: payload.items, categoryOrder: payload.categoryOrder, recipes: payload.recipes });
+  const newHash = JSON.stringify({ items: payload.items, categoryOrder: payload.categoryOrder, recipes: payload.recipes, catMemory: payload.catMemory || {} });
   try {
     await cloudDocRef().set(payload, { merge: true });
     lastCloudPayloadHash = newHash;
@@ -1959,6 +1963,13 @@ document.addEventListener('keydown', e => {
     if (isRecording && recognition) recognition.stop();
   }
 });
+
+// Rejestracja Service Workera (PWA)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
