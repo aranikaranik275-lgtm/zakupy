@@ -422,7 +422,7 @@ const CAT_KEYWORDS = {
     'woda','sok','cola','piwo','wino','herbata','kawa','napój','lemoniada','koktajl',
     'napój energetyczny','sok pomarańczowy','sok jabłkowy','sok pomidorowy',
     'sprite','pepsi','fanta','redbull','monster','isoton','gazowany','niegazowany',
-    'tonik','kombucha','kefir wodny','napar','syrop','koncentrat',
+    'tonik','kombucha','kefir wodny','napar','syrop','koncentrat soku',
   ],
   'przyprawy': [
     'przypraw','pieprz','sól','oregano','bazylia susz','tymianek','rozmaryn','kurkuma',
@@ -722,7 +722,11 @@ function parseMultipleProducts(rawText) {
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   const hasIngredientLines = lines.some(l => /^\s*[-–—*•]\s+/.test(l) || /^\d/.test(l));
 
-  if (hasIngredientLines || lines.length >= 3) {
+  // Policz przecinki oddzielające produkty (nie wewnątrz liczb jak "0,5")
+  const productCommas = text.replace(/\d,\d/g, '').split(',').length - 1;
+  const isCommaList = productCommas > lines.length;
+
+  if (!isCommaList && (hasIngredientLines || lines.length >= 3)) {
     const results = [];
     for (const line of lines) {
       // Pomiń nagłówki, tytuły i URLe
@@ -755,10 +759,12 @@ function parseMultipleProducts(rawText) {
   // Tryb standardowy (lista przez przecinki/średniki)
   const cleaned = sanitizeItemText(text)
     .replace(/\s+\n\s+/g, '\n')
-    .replace(/\s{2,}/g, ' ');
+    .replace(/\s{2,}/g, ' ')
+    .replace(/(\d),(\d)/g, '$1\u00B7$2'); // chroń przecinki w liczbach (0,5 → 0·5)
   return cleaned
     .split(/[,;\n]|\s+i\s+|\s+oraz\s+|\s+plus\s+/i)
     .map(s => s.trim())
+    .map(s => s.replace(/\u00B7/g, ',')) // przywróć przecinki w liczbach
     .map(s => s.replace(/^(dodaj|kup|potrzebuje|potrzebuję|wez|weź|prosze|proszę|poprosze|poproszę)\s+/i, '').trim())
     .map(s => s.replace(/^[-–—*]\s*/, '').trim())
     .filter(Boolean);
