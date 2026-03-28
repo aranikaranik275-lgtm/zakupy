@@ -1990,10 +1990,25 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// Rejestracja Service Workera (PWA)
+// Rejestracja Service Workera (PWA) z wymuszeniem aktualizacji
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js');
+      // Wymuszaj sprawdzenie aktualizacji przy każdym otwarciu
+      reg.update().catch(() => {});
+      // Natychmiast aktywuj nowy SW bez czekania
+      reg.addEventListener('updatefound', () => {
+        const newSW = reg.installing;
+        if (newSW) {
+          newSW.addEventListener('statechange', () => {
+            if (newSW.state === 'activated') {
+              window.location.reload();
+            }
+          });
+        }
+      });
+    } catch(e) {}
   });
 }
 </script>
